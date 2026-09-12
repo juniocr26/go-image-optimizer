@@ -2,14 +2,77 @@
 
 :root {
   color-scheme: light;
+  background: #f6fbff;
 }
 
 * {
   box-sizing: border-box;
 }
 
+html {
+  min-height: 100%;
+  background: #f6fbff;
+}
+
 body {
   margin: 0;
   min-width: 320px;
+  background: #f6fbff;
   font-family: Arial, Helvetica, sans-serif;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+.handwritten {
+  font-family: "Bradley Hand", "Segoe Print", "Comic Sans MS", cursive;
+  letter-spacing: 0;
+}
+
+.hero-grass {
+  -webkit-mask-image: linear-gradient(
+    to top,
+    rgb(0 0 0) 0%,
+    rgb(0 0 0) 58%,
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    to top,
+    rgb(0 0 0) 0%,
+    rgb(0 0 0) 58%,
+    transparent 100%
+  );
+}
+
+.heart-mark {
+  position: relative;
+  width: 10px;
+  height: 10px;
+  transform: translateY(1px) rotate(45deg);
+  border-radius: 2px;
+  background: #05a97f;
+}
+
+.heart-mark::before,
+.heart-mark::after {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  content: "";
+  border-radius: 999px;
+  background: #05a97f;
+}
+
+.heart-mark::before {
+  left: -5px;
+  top: 0;
+}
+
+.heart-mark::after {
+  left: 0;
+  top: -5px;
 }
