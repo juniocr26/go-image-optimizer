@@ -84,7 +84,7 @@ func ProcessImage(logger *slog.Logger, useCase compressImageUseCase) http.Handle
 		w.Header().Set("Content-Type", result.ContentType)
 		w.Header().Set("Content-Length", strconv.Itoa(len(result.Data)))
 		w.Header().Set("Content-Disposition", mime.FormatMediaType("attachment", map[string]string{
-			"filename": compressedFilename(fileHeader.Filename, result.Format),
+			"filename": compressedFilename(fileHeader.Filename, result.Format, result.ContentType),
 		}))
 		w.WriteHeader(http.StatusOK)
 
@@ -99,11 +99,18 @@ func writeCompressionError(w http.ResponseWriter, logger *slog.Logger, err error
 	case errors.Is(err, imagecompression.ErrEmptyImage):
 		writeJSONError(w, http.StatusBadRequest, "uploaded image is empty")
 	case errors.Is(err, imagecompression.ErrUnsupportedFormat):
-		writeJSONError(w, http.StatusUnsupportedMediaType, "unsupported image format. Use JPEG or PNG")
+		writeJSONError(w, http.StatusUnsupportedMediaType, "unsupported image format. Use JPEG, PNG, WebP, AVIF, HEIC, GIF, BMP, or TIFF")
 	case errors.Is(err, imagecompression.ErrInvalidImage):
 		writeJSONError(w, http.StatusBadRequest, "image content is invalid or corrupted")
 	case errors.Is(err, imagecompression.ErrImageTooLarge):
 		writeJSONError(w, http.StatusRequestEntityTooLarge, "image dimensions are too large to process safely")
+	case errors.Is(err, imagecompression.ErrAnimationTooLarge):
+		writeJSONError(w, http.StatusRequestEntityTooLarge, "animated image has too many canvas pixels to process safely")
+	case errors.Is(err, imagecompression.ErrUnsupportedVariant):
+		writeJSONError(w, http.StatusUnprocessableEntity, "this image variant is not supported")
+	case errors.Is(err, imagecompression.ErrCodecUnavailable):
+		logger.Warn("image codec unavailable", "error", err)
+		writeJSONError(w, http.StatusInternalServerError, "required image codec is unavailable")
 	default:
 		logger.Warn("image compression failed", "error", err)
 		writeJSONError(w, http.StatusInternalServerError, "image could not be compressed")
@@ -121,10 +128,10 @@ func cleanFilename(filename string) string {
 	return filename
 }
 
-func compressedFilename(filename string, format imagecompression.Format) string {
+func compressedFilename(filename string, format imagecompression.Format, contentType string) string {
 	filename = cleanFilename(filename)
 	extension := strings.ToLower(path.Ext(filename))
-	expectedExtension := defaultExtension(format)
+	expectedExtension := defaultExtension(format, contentType)
 
 	if !extensionMatchesFormat(extension, format) {
 		extension = expectedExtension
@@ -144,15 +151,44 @@ func extensionMatchesFormat(extension string, format imagecompression.Format) bo
 		return extension == ".jpg" || extension == ".jpeg"
 	case imagecompression.FormatPNG:
 		return extension == ".png"
+	case imagecompression.FormatWebP:
+		return extension == ".webp"
+	case imagecompression.FormatAVIF:
+		return extension == ".avif"
+	case imagecompression.FormatHEIF:
+		return extension == ".heic" || extension == ".heif"
+	case imagecompression.FormatGIF:
+		return extension == ".gif"
+	case imagecompression.FormatBMP:
+		return extension == ".bmp"
+	case imagecompression.FormatTIFF:
+		return extension == ".tif" || extension == ".tiff"
 	default:
 		return false
 	}
 }
 
-func defaultExtension(format imagecompression.Format) string {
+func defaultExtension(format imagecompression.Format, contentType string) string {
 	switch format {
+	case imagecompression.FormatJPEG:
+		return ".jpg"
 	case imagecompression.FormatPNG:
 		return ".png"
+	case imagecompression.FormatWebP:
+		return ".webp"
+	case imagecompression.FormatAVIF:
+		return ".avif"
+	case imagecompression.FormatHEIF:
+		if contentType == "image/heif" {
+			return ".heif"
+		}
+		return ".heic"
+	case imagecompression.FormatGIF:
+		return ".gif"
+	case imagecompression.FormatBMP:
+		return ".bmp"
+	case imagecompression.FormatTIFF:
+		return ".tiff"
 	default:
 		return ".jpg"
 	}

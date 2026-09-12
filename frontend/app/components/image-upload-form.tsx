@@ -10,7 +10,55 @@ import {
 } from "react";
 
 const MAX_UPLOAD_BYTES = 25 * 1024 * 1024;
-const SUPPORTED_IMAGE_TYPES = new Set(["image/jpeg", "image/png"]);
+const SUPPORTED_FORMAT_COPY =
+  "JPG, PNG, WebP, AVIF, HEIC, GIF, BMP and TIFF";
+const SUPPORTED_IMAGE_TYPES = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/avif",
+  "image/heic",
+  "image/heif",
+  "image/gif",
+  "image/bmp",
+  "image/x-ms-bmp",
+  "image/tiff",
+]);
+const SUPPORTED_IMAGE_EXTENSIONS = new Set([
+  ".jpg",
+  ".jpeg",
+  ".png",
+  ".webp",
+  ".avif",
+  ".heic",
+  ".heif",
+  ".gif",
+  ".bmp",
+  ".tif",
+  ".tiff",
+]);
+const IMAGE_ACCEPT = [
+  ".jpg",
+  ".jpeg",
+  ".png",
+  ".webp",
+  ".avif",
+  ".heic",
+  ".heif",
+  ".gif",
+  ".bmp",
+  ".tif",
+  ".tiff",
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/avif",
+  "image/heic",
+  "image/heif",
+  "image/gif",
+  "image/bmp",
+  "image/tiff",
+].join(",");
 
 type OptimizationResult = {
   name: string;
@@ -24,10 +72,12 @@ export function ImageUploadForm() {
   const inputRef = useRef<HTMLInputElement>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewFailed, setPreviewFailed] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<OptimizationResult | null>(null);
+  const [resultPreviewFailed, setResultPreviewFailed] = useState(false);
 
   useEffect(() => {
     return () => {
@@ -59,23 +109,31 @@ export function ImageUploadForm() {
 
     setError(null);
     setResult(null);
+    setResultPreviewFailed(false);
 
-    if (!SUPPORTED_IMAGE_TYPES.has(file.type)) {
+    if (!isSupportedImageFile(file)) {
       setSelectedFile(null);
       setPreviewUrl(null);
-      setError("Only JPG and PNG images are supported.");
+      setPreviewFailed(false);
+      setError(`Only ${SUPPORTED_FORMAT_COPY} images are supported.`);
       return;
     }
 
     if (file.size > MAX_UPLOAD_BYTES) {
       setSelectedFile(null);
       setPreviewUrl(null);
+      setPreviewFailed(false);
       setError("The selected image is larger than 25 MiB.");
       return;
     }
 
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl);
+    }
+
     setSelectedFile(file);
     setPreviewUrl(URL.createObjectURL(file));
+    setPreviewFailed(false);
   }
 
   function resetWorkflow() {
@@ -85,8 +143,10 @@ export function ImageUploadForm() {
 
     setSelectedFile(null);
     setPreviewUrl(null);
+    setPreviewFailed(false);
     setError(null);
     setResult(null);
+    setResultPreviewFailed(false);
 
     if (inputRef.current) {
       inputRef.current.value = "";
@@ -174,6 +234,7 @@ export function ImageUploadForm() {
         type: returnedImage.type || selectedFile.type || "application/octet-stream",
         url: URL.createObjectURL(returnedImage),
       });
+      setResultPreviewFailed(false);
     } catch {
       setError("Could not process the image right now.");
     } finally {
@@ -205,8 +266,8 @@ export function ImageUploadForm() {
         >
           <input
             ref={inputRef}
-            accept="image/jpeg,image/png"
-            aria-label="Choose a JPG or PNG image"
+            accept={IMAGE_ACCEPT}
+            aria-label="Choose a supported image"
             className="sr-only"
             disabled={isSubmitting}
             name="image"
@@ -217,11 +278,19 @@ export function ImageUploadForm() {
           <div className="grid w-full justify-items-center">
             {previewUrl && selectedFile ? (
               <div className="w-full max-w-[420px] overflow-hidden rounded-2xl border border-[#dbe8f1] bg-white shadow-[0_16px_42px_rgba(15,42,80,0.12)]">
-                <img
-                  alt={`Preview of ${selectedFile.name}`}
-                  className="h-56 w-full object-contain"
-                  src={previewUrl}
-                />
+                {previewFailed ? (
+                  <PreviewUnavailable
+                    fileName={selectedFile.name}
+                    fileType={selectedFile.type}
+                  />
+                ) : (
+                  <img
+                    alt={`Preview of ${selectedFile.name}`}
+                    className="h-56 w-full object-contain"
+                    onError={() => setPreviewFailed(true)}
+                    src={previewUrl}
+                  />
+                )}
               </div>
             ) : (
               <div className="grid h-16 w-16 place-items-center rounded-full bg-[#d9f4ec] text-[#08a87d] shadow-[0_16px_36px_rgba(0,168,125,0.16)]">
@@ -236,7 +305,7 @@ export function ImageUploadForm() {
               {selectedFile ? "Review the file and start when ready" : "or click to select a file"}
             </p>
             <p className="mt-5 text-sm leading-6 text-[#60708d] sm:text-base">
-              JPG and PNG only, up to 25 MiB.
+              {SUPPORTED_FORMAT_COPY}, up to 25 MiB.
             </p>
 
             {selectedFile ? (
@@ -335,11 +404,18 @@ export function ImageUploadForm() {
             </div>
 
             {result.type.startsWith("image/") ? (
-              <img
-                alt="Optimized image preview"
-                className="max-h-72 w-full rounded-xl border border-[#bddfe1] bg-white object-contain"
-                src={result.url}
-              />
+              resultPreviewFailed ? (
+                <div className="rounded-xl border border-[#bddfe1] bg-white">
+                  <PreviewUnavailable fileName={result.name} fileType={result.type} />
+                </div>
+              ) : (
+                <img
+                  alt="Optimized image preview"
+                  className="max-h-72 w-full rounded-xl border border-[#bddfe1] bg-white object-contain"
+                  onError={() => setResultPreviewFailed(true)}
+                  src={result.url}
+                />
+              )
             ) : null}
 
             <dl className="grid gap-3 sm:grid-cols-3">
@@ -394,6 +470,28 @@ function ResultMetric({ label, value }: { label: string; value: string }) {
   );
 }
 
+function PreviewUnavailable({
+  fileName,
+  fileType,
+}: {
+  fileName: string;
+  fileType: string;
+}) {
+  return (
+    <div className="grid h-56 place-items-center px-5 py-6 text-center">
+      <div className="min-w-0">
+        <div className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-[#eef5fb] text-[#60708d]">
+          <ImageIcon />
+        </div>
+        <p className="mt-4 truncate text-sm font-black text-[#081236]">{fileName}</p>
+        <p className="mt-2 text-sm leading-6 text-[#60708d]">
+          {fileType || "Preview not available in this browser"}
+        </p>
+      </div>
+    </div>
+  );
+}
+
 function UploadIcon() {
   return (
     <svg aria-hidden="true" className="h-8 w-8" fill="none" viewBox="0 0 24 24">
@@ -403,6 +501,26 @@ function UploadIcon() {
         strokeLinecap="round"
         strokeLinejoin="round"
         strokeWidth="2.2"
+      />
+    </svg>
+  );
+}
+
+function ImageIcon() {
+  return (
+    <svg aria-hidden="true" className="h-6 w-6" fill="none" viewBox="0 0 24 24">
+      <path
+        d="M4.5 6.2c0-.9.8-1.7 1.7-1.7h11.6c.9 0 1.7.8 1.7 1.7v11.6c0 .9-.8 1.7-1.7 1.7H6.2c-.9 0-1.7-.8-1.7-1.7V6.2Z"
+        stroke="currentColor"
+        strokeLinejoin="round"
+        strokeWidth="2"
+      />
+      <path
+        d="m5 16 4.2-4.2c.4-.4 1-.4 1.4 0l2.1 2.1 1.1-1.1c.4-.4 1-.4 1.4 0L19 16.6M8.5 8.5h.1"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="2"
       />
     </svg>
   );
@@ -518,10 +636,72 @@ function readDownloadName(contentDisposition: string | null) {
 }
 
 function buildCompressedFilename(filename: string, contentType: string) {
-  const extension = contentType === "image/png" ? ".png" : ".jpg";
+  const currentExtension = readExtension(filename);
+  const extension = extensionMatchesContentType(currentExtension, contentType)
+    ? currentExtension
+    : extensionForContentType(contentType);
   const base = filename.replace(/\.[^/.]+$/, "") || "image";
 
   return `${base}_compressed${extension}`;
+}
+
+function isSupportedImageFile(file: File) {
+  const type = file.type.toLowerCase();
+  return SUPPORTED_IMAGE_TYPES.has(type) || SUPPORTED_IMAGE_EXTENSIONS.has(readExtension(file.name));
+}
+
+function readExtension(filename: string) {
+  const index = filename.lastIndexOf(".");
+  return index >= 0 ? filename.slice(index).toLowerCase() : "";
+}
+
+function extensionMatchesContentType(extension: string, contentType: string) {
+  switch (contentType) {
+    case "image/jpeg":
+      return extension === ".jpg" || extension === ".jpeg";
+    case "image/png":
+      return extension === ".png";
+    case "image/webp":
+      return extension === ".webp";
+    case "image/avif":
+      return extension === ".avif";
+    case "image/heic":
+    case "image/heif":
+      return extension === ".heic" || extension === ".heif";
+    case "image/gif":
+      return extension === ".gif";
+    case "image/bmp":
+    case "image/x-ms-bmp":
+      return extension === ".bmp";
+    case "image/tiff":
+      return extension === ".tif" || extension === ".tiff";
+    default:
+      return false;
+  }
+}
+
+function extensionForContentType(contentType: string) {
+  switch (contentType) {
+    case "image/png":
+      return ".png";
+    case "image/webp":
+      return ".webp";
+    case "image/avif":
+      return ".avif";
+    case "image/heic":
+      return ".heic";
+    case "image/heif":
+      return ".heif";
+    case "image/gif":
+      return ".gif";
+    case "image/bmp":
+    case "image/x-ms-bmp":
+      return ".bmp";
+    case "image/tiff":
+      return ".tiff";
+    default:
+      return ".jpg";
+  }
 }
 
 function formatBytes(bytes: number) {

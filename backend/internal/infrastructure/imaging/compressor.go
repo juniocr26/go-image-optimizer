@@ -4,13 +4,13 @@ import (
 	"bytes"
 	"fmt"
 	"image"
+	"image/gif"
 	"image/jpeg"
 	"image/png"
-	"net/http"
-
-	gometadata "github.com/FlavioCFOliveira/GoMetadata"
 
 	"github.com/juniorosa/go-image-optimizer/backend/internal/application/imagecompression"
+	"golang.org/x/image/bmp"
+	"golang.org/x/image/tiff"
 )
 
 const (
@@ -18,34 +18,54 @@ const (
 	// still allowing meaningful size reduction for many camera/exported images.
 	DefaultJPEGQuality = 82
 
-	// DefaultMaxDecodedPixels limits decoded image memory growth. A 32 MP RGBA
-	// image needs roughly 128 MiB before encoder overhead.
-	DefaultMaxDecodedPixels = 32_000_000
+	DefaultWebPQuality = 82
+	DefaultAVIFQuality = 60
+	DefaultHEIFQuality = 60
 )
 
 type Compressor struct {
-	JPEGQuality      int
-	MaxDecodedPixels int
+	JPEGQuality            int
+	WebPQuality            int
+	AVIFQuality            int
+	HEIFQuality            int
+	MaxDecodedPixels       int
+	MaxAnimatedFramePixels int
 }
 
 func NewCompressor() Compressor {
 	return Compressor{
-		JPEGQuality:      DefaultJPEGQuality,
-		MaxDecodedPixels: DefaultMaxDecodedPixels,
+		JPEGQuality:            DefaultJPEGQuality,
+		WebPQuality:            DefaultWebPQuality,
+		AVIFQuality:            DefaultAVIFQuality,
+		HEIFQuality:            DefaultHEIFQuality,
+		MaxDecodedPixels:       DefaultMaxDecodedPixels,
+		MaxAnimatedFramePixels: DefaultMaxAnimatedFramePixels,
 	}
 }
 
 func (c Compressor) Compress(input []byte) (imagecompression.Result, error) {
-	format, err := detectFormat(input)
+	detected, err := detectFormat(input)
 	if err != nil {
 		return imagecompression.Result{}, err
 	}
 
-	switch format {
+	switch detected.format {
 	case imagecompression.FormatJPEG:
 		return c.compressJPEG(input)
 	case imagecompression.FormatPNG:
 		return c.compressPNG(input)
+	case imagecompression.FormatWebP:
+		return c.compressWebP(input)
+	case imagecompression.FormatAVIF:
+		return c.compressAVIF(input)
+	case imagecompression.FormatHEIF:
+		return c.compressHEIF(input, detected.contentType)
+	case imagecompression.FormatGIF:
+		return c.compressGIF(input)
+	case imagecompression.FormatBMP:
+		return c.compressBMP(input)
+	case imagecompression.FormatTIFF:
+		return c.compressTIFF(input)
 	default:
 		return imagecompression.Result{}, imagecompression.ErrUnsupportedFormat
 	}
@@ -66,85 +86,14 @@ func (c Compressor) compressJPEG(input []byte) (imagecompression.Result, error) 
 		return imagecompression.Result{}, imagecompression.ErrInvalidImage
 	}
 
-	orientation := readEXIFOrientation(input)
-	img = applyOrientation(img, orientation)
+	img = applyOrientation(img, readEXIFOrientation(input))
 
 	var output bytes.Buffer
-
-	if err := jpeg.Encode(
-		&output,
-		img,
-		&jpeg.Options{Quality: c.jpegQuality()},
-	); err != nil {
+	if err := jpeg.Encode(&output, img, &jpeg.Options{Quality: c.jpegQuality()}); err != nil {
 		return imagecompression.Result{}, fmt.Errorf("encode jpeg: %w", err)
 	}
 
-	bounds := img.Bounds()
-
-	return imagecompression.Result{
-		Data:        output.Bytes(),
-		Format:      imagecompression.FormatJPEG,
-		ContentType: "image/jpeg",
-		Width:       bounds.Dx(),
-		Height:      bounds.Dy(),
-	}, nil
-}
-
-func applyOrientation(src image.Image, orientation uint16) image.Image {
-	if orientation <= 1 || orientation > 8 {
-		return src
-	}
-
-	bounds := src.Bounds()
-	width := bounds.Dx()
-	height := bounds.Dy()
-
-	var dst *image.NRGBA
-
-	if orientation >= 5 {
-		dst = image.NewNRGBA(image.Rect(0, 0, height, width))
-	} else {
-		dst = image.NewNRGBA(image.Rect(0, 0, width, height))
-	}
-
-	for y := 0; y < height; y++ {
-		for x := 0; x < width; x++ {
-			color := src.At(bounds.Min.X+x, bounds.Min.Y+y)
-
-			switch orientation {
-			case 2:
-				dst.Set(width-1-x, y, color)
-			case 3:
-				dst.Set(width-1-x, height-1-y, color)
-			case 4:
-				dst.Set(x, height-1-y, color)
-			case 5:
-				dst.Set(y, x, color)
-			case 6:
-				dst.Set(height-1-y, x, color)
-			case 7:
-				dst.Set(height-1-y, width-1-x, color)
-			case 8:
-				dst.Set(y, width-1-x, color)
-			}
-		}
-	}
-
-	return dst
-}
-
-func readEXIFOrientation(input []byte) uint16 {
-	metadata, err := gometadata.Read(bytes.NewReader(input))
-	if err != nil {
-		return 1
-	}
-
-	orientation, ok := metadata.Orientation()
-	if !ok {
-		return 1
-	}
-
-	return orientation
+	return staticResult(output.Bytes(), imagecompression.FormatJPEG, "image/jpeg", img), nil
 }
 
 func (c Compressor) compressPNG(input []byte) (imagecompression.Result, error) {
@@ -168,52 +117,123 @@ func (c Compressor) compressPNG(input []byte) (imagecompression.Result, error) {
 		return imagecompression.Result{}, fmt.Errorf("encode png: %w", err)
 	}
 
+	return staticResult(output.Bytes(), imagecompression.FormatPNG, "image/png", img), nil
+}
+
+func (c Compressor) compressGIF(input []byte) (imagecompression.Result, error) {
+	cfg, err := gif.DecodeConfig(bytes.NewReader(input))
+	if err != nil {
+		return imagecompression.Result{}, imagecompression.ErrInvalidImage
+	}
+
+	if err := validateDimensions(cfg, c.maxDecodedPixels()); err != nil {
+		return imagecompression.Result{}, err
+	}
+
+	img, err := gif.DecodeAll(bytes.NewReader(input))
+	if err != nil {
+		return imagecompression.Result{}, imagecompression.ErrInvalidImage
+	}
+	if len(img.Image) == 0 {
+		return imagecompression.Result{}, imagecompression.ErrInvalidImage
+	}
+
+	if len(img.Image) > 1 {
+		if err := validateAnimatedDimensions(cfg.Width, cfg.Height, len(img.Image), c.maxAnimatedFramePixels()); err != nil {
+			return imagecompression.Result{}, err
+		}
+	}
+
+	var output bytes.Buffer
+	if err := gif.EncodeAll(&output, img); err != nil {
+		return imagecompression.Result{}, fmt.Errorf("encode gif: %w", err)
+	}
+
 	return imagecompression.Result{
 		Data:        output.Bytes(),
-		Format:      imagecompression.FormatPNG,
-		ContentType: "image/png",
+		Format:      imagecompression.FormatGIF,
+		ContentType: "image/gif",
 		Width:       cfg.Width,
 		Height:      cfg.Height,
+		Animated:    len(img.Image) > 1,
+		FrameCount:  len(img.Image),
 	}, nil
 }
 
-func detectFormat(input []byte) (imagecompression.Format, error) {
-	switch http.DetectContentType(input) {
-	case "image/jpeg":
-		return imagecompression.FormatJPEG, nil
-	case "image/png":
-		return imagecompression.FormatPNG, nil
-	default:
-		return "", imagecompression.ErrUnsupportedFormat
+func (c Compressor) compressBMP(input []byte) (imagecompression.Result, error) {
+	cfg, err := bmp.DecodeConfig(bytes.NewReader(input))
+	if err != nil {
+		return imagecompression.Result{}, imagecompression.ErrInvalidImage
 	}
+
+	if err := validateDimensions(cfg, c.maxDecodedPixels()); err != nil {
+		return imagecompression.Result{}, err
+	}
+
+	img, err := bmp.Decode(bytes.NewReader(input))
+	if err != nil {
+		return imagecompression.Result{}, imagecompression.ErrInvalidImage
+	}
+
+	var output bytes.Buffer
+	if err := bmp.Encode(&output, img); err != nil {
+		return imagecompression.Result{}, fmt.Errorf("encode bmp: %w", err)
+	}
+
+	return staticResult(output.Bytes(), imagecompression.FormatBMP, "image/bmp", img), nil
 }
 
-func validateDimensions(cfg image.Config, maxPixels int) error {
-	if cfg.Width <= 0 || cfg.Height <= 0 {
-		return imagecompression.ErrInvalidImage
+func (c Compressor) compressTIFF(input []byte) (imagecompression.Result, error) {
+	cfg, err := tiff.DecodeConfig(bytes.NewReader(input))
+	if err != nil {
+		return imagecompression.Result{}, imagecompression.ErrInvalidImage
 	}
 
-	if cfg.Width > maxPixels/cfg.Height {
-		return imagecompression.ErrImageTooLarge
+	if err := validateDimensions(cfg, c.maxDecodedPixels()); err != nil {
+		return imagecompression.Result{}, err
 	}
 
-	return nil
+	img, err := tiff.Decode(bytes.NewReader(input))
+	if err != nil {
+		return imagecompression.Result{}, imagecompression.ErrInvalidImage
+	}
+
+	var output bytes.Buffer
+	if err := tiff.Encode(&output, img, &tiff.Options{Compression: tiff.Deflate, Predictor: true}); err != nil {
+		return imagecompression.Result{}, fmt.Errorf("encode tiff: %w", err)
+	}
+
+	return staticResult(output.Bytes(), imagecompression.FormatTIFF, "image/tiff", img), nil
+}
+
+func staticResult(data []byte, format imagecompression.Format, contentType string, img image.Image) imagecompression.Result {
+	bounds := img.Bounds()
+
+	return imagecompression.Result{
+		Data:        data,
+		Format:      format,
+		ContentType: contentType,
+		Width:       bounds.Dx(),
+		Height:      bounds.Dy(),
+		Animated:    false,
+		FrameCount:  1,
+	}
 }
 
 func (c Compressor) jpegQuality() int {
-	if c.JPEGQuality == 0 {
-		return DefaultJPEGQuality
-	}
+	return clampQuality(c.JPEGQuality, DefaultJPEGQuality)
+}
 
-	if c.JPEGQuality < 1 {
-		return 1
-	}
+func (c Compressor) webpQuality() int {
+	return clampQuality(c.WebPQuality, DefaultWebPQuality)
+}
 
-	if c.JPEGQuality > 100 {
-		return 100
-	}
+func (c Compressor) avifQuality() int {
+	return clampQuality(c.AVIFQuality, DefaultAVIFQuality)
+}
 
-	return c.JPEGQuality
+func (c Compressor) heifQuality() int {
+	return clampQuality(c.HEIFQuality, DefaultHEIFQuality)
 }
 
 func (c Compressor) maxDecodedPixels() int {
@@ -222,4 +242,28 @@ func (c Compressor) maxDecodedPixels() int {
 	}
 
 	return c.MaxDecodedPixels
+}
+
+func (c Compressor) maxAnimatedFramePixels() int {
+	if c.MaxAnimatedFramePixels <= 0 {
+		return DefaultMaxAnimatedFramePixels
+	}
+
+	return c.MaxAnimatedFramePixels
+}
+
+func clampQuality(value, fallback int) int {
+	if value == 0 {
+		return fallback
+	}
+
+	if value < 1 {
+		return 1
+	}
+
+	if value > 100 {
+		return 100
+	}
+
+	return value
 }

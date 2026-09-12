@@ -2,9 +2,9 @@
 
 Aplicação para otimização de imagens desenvolvida em Go, com uma interface web utilizando Next.js, React e Tailwind CSS.
 
-O projeto será desenvolvido de forma incremental, começando por um fluxo síncrono de compressão para JPEG/PNG e evoluindo sua arquitetura conforme novos requisitos e desafios técnicos surgirem.
+O projeto será desenvolvido de forma incremental, começando por um fluxo síncrono de compressão e evoluindo sua arquitetura conforme novos requisitos e desafios técnicos surgirem.
 
-> **Status atual:** O primeiro fluxo utilizável de compressão de imagens está implementado para JPEG/JPG e PNG.
+> **Status atual:** O fluxo de compressão está implementado para JPEG/JPG, PNG, WebP, AVIF, HEIC/HEIF, GIF, BMP e TIFF.
 
 ## Visão geral
 
@@ -22,15 +22,31 @@ A funcionalidade atual permite:
 - Receber a imagem comprimida como resultado.
 - Baixar a imagem comprimida diretamente pelo navegador.
 
-A compressão JPEG usa re-encoding lossy conservador. A compressão PNG é lossless para o conteúdo dos pixels. A aplicação preserva as dimensões e o formato dos arquivos suportados, mas não promete que toda saída ficará menor.
+O backend identifica o formato real da imagem pelos bytes do arquivo, sem confiar em extensão ou MIME type informado pelo navegador. A aplicação devolve a mesma família de formato recebida, preserva dimensões e não promete que toda saída ficará menor.
 
 Outras funcionalidades de otimização serão adicionadas gradualmente conforme o projeto evoluir.
+
+## Formatos suportados
+
+| Formato | Saída | Observações |
+| --- | --- | --- |
+| JPEG / JPG | JPEG | Re-encode lossy com qualidade conservadora. A orientação EXIF é aplicada aos pixels antes da saída. |
+| PNG | PNG | Saída lossless para pixels usando compressão PNG alta. Transparência é preservada. |
+| WebP | WebP | WebP estático e animado são suportados. A saída animada preserva quantidade de frames e tempos, reencodando frames reconstruídos. |
+| AVIF | AVIF | AVIF estático é suportado; AVIF com múltiplos frames é processado quando o codec consegue decodificar. |
+| HEIC / HEIF | Família HEIC / HEIF | Usa libheif/HEVC nativo no container do backend. Variantes HEIF não suportadas são rejeitadas em vez de simuladas. |
+| GIF | GIF | GIF estático e animado são suportados, incluindo delays e configuração de loop. |
+| BMP | BMP | Decodificado e reencodado como BMP; redução de tamanho não é garantida. |
+| TIFF | TIFF | Reencodado como TIFF com compressão Deflate. |
+
+WebM, SVG, formatos RAW de câmera, vídeos e arquivos compactados não são suportados.
 
 ## Tecnologias
 
 ### Backend
 
 - Go
+- Bibliotecas nativas libheif no runtime Docker para suporte a HEIC/HEIF
 
 ### Frontend
 
@@ -54,12 +70,14 @@ flowchart LR
 
 Essa arquitetura é intencionalmente simples. O ciclo de vida atual da requisição é efêmero: imagens enviadas e comprimidas não são persistidas pelo backend. Novos componentes ou serviços serão introduzidos somente quando requisitos ou limitações observadas justificarem a complexidade adicional.
 
-Para conhecer as decisões arquiteturais e seus trade-offs, consulte [Arquitetura](docs/pt-BR/architecture.md).
+Para conhecer as decisões arquiteturais e seus trade-offs, consulte [Arquitetura](docs/pt-BR/architecture.md). Para detalhes de container, consulte [Docker](docs/pt-BR/docker.md).
 
 ## Documentação
 
 - [Architecture - English](docs/en/architecture.md)
 - [Arquitetura](docs/pt-BR/architecture.md)
+- [Docker](docs/pt-BR/docker.md)
+- [ADR 001: Codecs nativos de imagem](docs/pt-BR/adr-001-codecs-nativos.md)
 - [Test Documentation - English](TESTS_README.md)
 - [Documentação de Testes](TESTS_README-ptBR.md)
 - [README — English](README.md)
@@ -68,10 +86,9 @@ Para conhecer as decisões arquiteturais e seus trade-offs, consulte [Arquitetur
 
 O projeto será desenvolvido de forma incremental. Entre as funcionalidades planejadas estão:
 
-- Compressão de imagens JPEG/JPG e PNG
+- Compressão de imagens JPEG/JPG, PNG, WebP, AVIF, HEIC/HEIF, GIF, BMP e TIFF
 - Redimensionamento
 - Conversão de formatos
-- Geração de WebP e AVIF
 - Geração de thumbnails
 - Histórico de processamentos
 

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"image"
 	"image/color"
+	"image/gif"
 	"image/jpeg"
 	"image/png"
 	"io"
@@ -12,9 +13,17 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/textproto"
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/deepteams/webp"
+	"github.com/gen2brain/avif"
+	"github.com/strukturag/libheif/go/heif"
+	"golang.org/x/image/bmp"
+	"golang.org/x/image/tiff"
 )
 
 func TestHealth(t *testing.T) {
@@ -32,89 +41,187 @@ func TestHealth(t *testing.T) {
 	}
 }
 
-func TestProcessImageCompressesJPEG(t *testing.T) {
-	imageBytes := encodeJPEGFixture(t, 80, 60)
-	request := newMultipartImageRequest(t, "image", "sample.jpg", "image/jpeg", imageBytes)
-	response := httptest.NewRecorder()
+func TestProcessImageCompressesSupportedFormats(t *testing.T) {
+	source := testImage(40, 28)
 
-	NewRouter(testLogger()).ServeHTTP(response, request)
-
-	if response.Code != http.StatusOK {
-		t.Fatalf("expected status %d, got %d with body %q", http.StatusOK, response.Code, response.Body.String())
+	tests := []struct {
+		name                string
+		filename            string
+		requestContentType  string
+		input               []byte
+		responseContentType string
+		downloadName        string
+		decode              func(*testing.T, []byte) image.Image
+	}{
+		{
+			name:                "jpeg",
+			filename:            "sample.jpg",
+			requestContentType:  "image/jpeg",
+			input:               encodeJPEGFixture(t, source, 100),
+			responseContentType: "image/jpeg",
+			downloadName:        "sample_compressed.jpg",
+			decode:              decodeJPEG,
+		},
+		{
+			name:                "png",
+			filename:            "sample.png",
+			requestContentType:  "image/png",
+			input:               encodePNGFixture(t, source, png.NoCompression),
+			responseContentType: "image/png",
+			downloadName:        "sample_compressed.png",
+			decode:              decodePNG,
+		},
+		{
+			name:                "webp",
+			filename:            "sample.webp",
+			requestContentType:  "image/webp",
+			input:               encodeWebPFixture(t, source),
+			responseContentType: "image/webp",
+			downloadName:        "sample_compressed.webp",
+			decode:              decodeWebP,
+		},
+		{
+			name:                "avif",
+			filename:            "sample.avif",
+			requestContentType:  "image/avif",
+			input:               encodeAVIFFixture(t, source),
+			responseContentType: "image/avif",
+			downloadName:        "sample_compressed.avif",
+			decode:              decodeAVIF,
+		},
+		{
+			name:                "heic",
+			filename:            "sample.heic",
+			requestContentType:  "image/heic",
+			input:               encodeHEIFFixture(t, source),
+			responseContentType: "image/heic",
+			downloadName:        "sample_compressed.heic",
+			decode:              decodeHEIF,
+		},
+		{
+			name:                "heif-extension",
+			filename:            "sample.heif",
+			requestContentType:  "image/heif",
+			input:               encodeHEIFFixture(t, source),
+			responseContentType: "image/heic",
+			downloadName:        "sample_compressed.heif",
+			decode:              decodeHEIF,
+		},
+		{
+			name:                "gif",
+			filename:            "sample.gif",
+			requestContentType:  "image/gif",
+			input:               encodeGIFFixture(t, source),
+			responseContentType: "image/gif",
+			downloadName:        "sample_compressed.gif",
+			decode:              decodeGIF,
+		},
+		{
+			name:                "bmp",
+			filename:            "sample.bmp",
+			requestContentType:  "image/bmp",
+			input:               encodeBMPFixture(t, source),
+			responseContentType: "image/bmp",
+			downloadName:        "sample_compressed.bmp",
+			decode:              decodeBMP,
+		},
+		{
+			name:                "tiff",
+			filename:            "sample.tiff",
+			requestContentType:  "image/tiff",
+			input:               encodeTIFFFixture(t, source),
+			responseContentType: "image/tiff",
+			downloadName:        "sample_compressed.tiff",
+			decode:              decodeTIFF,
+		},
+		{
+			name:                "tif-extension",
+			filename:            "sample.tif",
+			requestContentType:  "image/tiff",
+			input:               encodeTIFFFixture(t, source),
+			responseContentType: "image/tiff",
+			downloadName:        "sample_compressed.tif",
+			decode:              decodeTIFF,
+		},
 	}
 
-	decoded, format, err := image.Decode(bytes.NewReader(response.Body.Bytes()))
-	if err != nil {
-		t.Fatalf("response body is not a decodable image: %v", err)
-	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			request := newMultipartImageRequest(t, "image", tt.filename, tt.requestContentType, tt.input)
+			response := httptest.NewRecorder()
 
-	if format != "jpeg" {
-		t.Fatalf("expected decoded format jpeg, got %q", format)
-	}
+			NewRouter(testLogger()).ServeHTTP(response, request)
 
-	if decoded.Bounds().Dx() != 80 || decoded.Bounds().Dy() != 60 {
-		t.Fatalf("expected dimensions 80x60, got %dx%d", decoded.Bounds().Dx(), decoded.Bounds().Dy())
-	}
+			if response.Code != http.StatusOK {
+				t.Fatalf("expected status %d, got %d with body %q", http.StatusOK, response.Code, response.Body.String())
+			}
 
-	if got := response.Header().Get("Content-Type"); got != "image/jpeg" {
-		t.Fatalf("expected Content-Type image/jpeg, got %q", got)
-	}
+			decoded := tt.decode(t, response.Body.Bytes())
+			assertDimensions(t, decoded, 40, 28)
 
-	if got := response.Header().Get("Content-Length"); got != strconv.Itoa(response.Body.Len()) {
-		t.Fatalf("expected Content-Length %d, got %q", response.Body.Len(), got)
-	}
+			if got := response.Header().Get("Content-Type"); got != tt.responseContentType {
+				t.Fatalf("expected Content-Type %q, got %q", tt.responseContentType, got)
+			}
 
-	if got := response.Header().Get("Content-Disposition"); !strings.Contains(got, "sample_compressed.jpg") {
-		t.Fatalf("expected Content-Disposition to include compressed filename, got %q", got)
+			if got := response.Header().Get("Content-Length"); got != strconv.Itoa(response.Body.Len()) {
+				t.Fatalf("expected Content-Length %d, got %q", response.Body.Len(), got)
+			}
+
+			if got := response.Header().Get("Content-Disposition"); !strings.Contains(got, tt.downloadName) {
+				t.Fatalf("expected Content-Disposition to include %q, got %q", tt.downloadName, got)
+			}
+		})
 	}
 }
 
-func TestProcessImageCompressesPNG(t *testing.T) {
-	imageBytes := encodePNGFixture(t, 48, 32)
-	request := newMultipartImageRequest(t, "image", "sample.png", "image/png", imageBytes)
-	response := httptest.NewRecorder()
+func TestProcessImageNormalizesMismatchedFilenameExtensionsFromContent(t *testing.T) {
+	source := testImage(24, 24)
 
-	NewRouter(testLogger()).ServeHTTP(response, request)
-
-	if response.Code != http.StatusOK {
-		t.Fatalf("expected status %d, got %d with body %q", http.StatusOK, response.Code, response.Body.String())
+	tests := []struct {
+		name         string
+		filename     string
+		contentType  string
+		input        []byte
+		downloadName string
+	}{
+		{
+			name:         "jpeg named png",
+			filename:     "sample.png",
+			contentType:  "image/png",
+			input:        encodeJPEGFixture(t, source, 100),
+			downloadName: "sample_compressed.jpg",
+		},
+		{
+			name:         "png named jpg",
+			filename:     "sample.jpg",
+			contentType:  "image/jpeg",
+			input:        encodePNGFixture(t, source, png.NoCompression),
+			downloadName: "sample_compressed.png",
+		},
+		{
+			name:         "webp named bmp",
+			filename:     "sample.bmp",
+			contentType:  "image/bmp",
+			input:        encodeWebPFixture(t, source),
+			downloadName: "sample_compressed.webp",
+		},
 	}
 
-	decoded, format, err := image.Decode(bytes.NewReader(response.Body.Bytes()))
-	if err != nil {
-		t.Fatalf("response body is not a decodable image: %v", err)
-	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			request := newMultipartImageRequest(t, "image", tt.filename, tt.contentType, tt.input)
+			response := httptest.NewRecorder()
 
-	if format != "png" {
-		t.Fatalf("expected decoded format png, got %q", format)
-	}
+			NewRouter(testLogger()).ServeHTTP(response, request)
 
-	if decoded.Bounds().Dx() != 48 || decoded.Bounds().Dy() != 32 {
-		t.Fatalf("expected dimensions 48x32, got %dx%d", decoded.Bounds().Dx(), decoded.Bounds().Dy())
-	}
+			if response.Code != http.StatusOK {
+				t.Fatalf("expected status %d, got %d with body %q", http.StatusOK, response.Code, response.Body.String())
+			}
 
-	if got := response.Header().Get("Content-Type"); got != "image/png" {
-		t.Fatalf("expected Content-Type image/png, got %q", got)
-	}
-
-	if got := response.Header().Get("Content-Disposition"); !strings.Contains(got, "sample_compressed.png") {
-		t.Fatalf("expected Content-Disposition to include compressed filename, got %q", got)
-	}
-}
-
-func TestProcessImageNormalizesMismatchedFilenameExtension(t *testing.T) {
-	imageBytes := encodeJPEGFixture(t, 24, 24)
-	request := newMultipartImageRequest(t, "image", "sample.png", "image/png", imageBytes)
-	response := httptest.NewRecorder()
-
-	NewRouter(testLogger()).ServeHTTP(response, request)
-
-	if response.Code != http.StatusOK {
-		t.Fatalf("expected status %d, got %d with body %q", http.StatusOK, response.Code, response.Body.String())
-	}
-
-	if got := response.Header().Get("Content-Disposition"); !strings.Contains(got, "sample_compressed.jpg") {
-		t.Fatalf("expected Content-Disposition to use actual image format, got %q", got)
+			if got := response.Header().Get("Content-Disposition"); !strings.Contains(got, tt.downloadName) {
+				t.Fatalf("expected Content-Disposition to include %q, got %q", tt.downloadName, got)
+			}
+		})
 	}
 }
 
@@ -183,6 +290,21 @@ func TestProcessImageRequiresMultipartForm(t *testing.T) {
 
 func TestProcessImageRejectsUnsupportedFormat(t *testing.T) {
 	request := newMultipartImageRequest(t, "image", "notes.txt", "text/plain", []byte("not an image"))
+	response := httptest.NewRecorder()
+
+	NewRouter(testLogger()).ServeHTTP(response, request)
+
+	if response.Code != http.StatusUnsupportedMediaType {
+		t.Fatalf("expected status %d, got %d", http.StatusUnsupportedMediaType, response.Code)
+	}
+
+	if !strings.Contains(response.Body.String(), "Use JPEG, PNG, WebP, AVIF, HEIC, GIF, BMP, or TIFF") {
+		t.Fatalf("expected supported-format error, got %q", response.Body.String())
+	}
+}
+
+func TestProcessImageDoesNotTrustFilenameExtension(t *testing.T) {
+	request := newMultipartImageRequest(t, "image", "broken.webp", "image/webp", []byte("not a webp"))
 	response := httptest.NewRecorder()
 
 	NewRouter(testLogger()).ServeHTTP(response, request)
@@ -261,29 +383,6 @@ func testLogger() *slog.Logger {
 	return slog.New(slog.NewTextHandler(io.Discard, nil))
 }
 
-func encodeJPEGFixture(t *testing.T, width, height int) []byte {
-	t.Helper()
-
-	var buffer bytes.Buffer
-	if err := jpeg.Encode(&buffer, testImage(width, height), &jpeg.Options{Quality: 100}); err != nil {
-		t.Fatalf("failed to encode jpeg fixture: %v", err)
-	}
-
-	return buffer.Bytes()
-}
-
-func encodePNGFixture(t *testing.T, width, height int) []byte {
-	t.Helper()
-
-	var buffer bytes.Buffer
-	encoder := png.Encoder{CompressionLevel: png.NoCompression}
-	if err := encoder.Encode(&buffer, testImage(width, height)); err != nil {
-		t.Fatalf("failed to encode png fixture: %v", err)
-	}
-
-	return buffer.Bytes()
-}
-
 func testImage(width, height int) image.Image {
 	img := image.NewNRGBA(image.Rect(0, 0, width, height))
 
@@ -299,4 +398,250 @@ func testImage(width, height int) image.Image {
 	}
 
 	return img
+}
+
+func encodeJPEGFixture(t *testing.T, img image.Image, quality int) []byte {
+	t.Helper()
+
+	var buffer bytes.Buffer
+	if err := jpeg.Encode(&buffer, img, &jpeg.Options{Quality: quality}); err != nil {
+		t.Fatalf("failed to encode jpeg fixture: %v", err)
+	}
+
+	return buffer.Bytes()
+}
+
+func encodePNGFixture(t *testing.T, img image.Image, level png.CompressionLevel) []byte {
+	t.Helper()
+
+	var buffer bytes.Buffer
+	encoder := png.Encoder{CompressionLevel: level}
+	if err := encoder.Encode(&buffer, img); err != nil {
+		t.Fatalf("failed to encode png fixture: %v", err)
+	}
+
+	return buffer.Bytes()
+}
+
+func encodeWebPFixture(t *testing.T, img image.Image) []byte {
+	t.Helper()
+
+	var buffer bytes.Buffer
+	if err := webp.Encode(&buffer, img, &webp.EncoderOptions{Quality: 100, Method: 4}); err != nil {
+		t.Fatalf("failed to encode webp fixture: %v", err)
+	}
+
+	return buffer.Bytes()
+}
+
+func encodeAVIFFixture(t *testing.T, img image.Image) []byte {
+	t.Helper()
+
+	var buffer bytes.Buffer
+	if err := avif.Encode(&buffer, img, avif.Options{Quality: 70, QualityAlpha: 100, Speed: 8}); err != nil {
+		t.Fatalf("failed to encode avif fixture: %v", err)
+	}
+
+	return buffer.Bytes()
+}
+
+func encodeHEIFFixture(t *testing.T, img image.Image) []byte {
+	t.Helper()
+
+	ctx, err := heif.EncodeFromImage(toRGBAFixture(img), heif.CompressionHEVC, 70, heif.LosslessModeDisabled, heif.LoggingLevelNone)
+	if err != nil {
+		t.Fatalf("failed to encode heif fixture: %v", err)
+	}
+
+	path := filepath.Join(t.TempDir(), "fixture.heic")
+	if err := ctx.WriteToFile(path); err != nil {
+		t.Fatalf("failed to write heif fixture: %v", err)
+	}
+
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("failed to read heif fixture: %v", err)
+	}
+
+	return data
+}
+
+func encodeGIFFixture(t *testing.T, img image.Image) []byte {
+	t.Helper()
+
+	palette := color.Palette{
+		color.Black,
+		color.White,
+		color.NRGBA{R: 64, G: 160, B: 220, A: 255},
+		color.NRGBA{R: 230, G: 80, B: 110, A: 255},
+	}
+	bounds := img.Bounds()
+	frame := image.NewPaletted(image.Rect(0, 0, bounds.Dx(), bounds.Dy()), palette)
+	for y := 0; y < bounds.Dy(); y++ {
+		for x := 0; x < bounds.Dx(); x++ {
+			frame.Set(x, y, img.At(bounds.Min.X+x, bounds.Min.Y+y))
+		}
+	}
+
+	var buffer bytes.Buffer
+	if err := gif.EncodeAll(&buffer, &gif.GIF{
+		Image: []*image.Paletted{frame},
+		Delay: []int{0},
+		Config: image.Config{
+			ColorModel: palette,
+			Width:      bounds.Dx(),
+			Height:     bounds.Dy(),
+		},
+	}); err != nil {
+		t.Fatalf("failed to encode gif fixture: %v", err)
+	}
+
+	return buffer.Bytes()
+}
+
+func encodeBMPFixture(t *testing.T, img image.Image) []byte {
+	t.Helper()
+
+	var buffer bytes.Buffer
+	if err := bmp.Encode(&buffer, img); err != nil {
+		t.Fatalf("failed to encode bmp fixture: %v", err)
+	}
+
+	return buffer.Bytes()
+}
+
+func encodeTIFFFixture(t *testing.T, img image.Image) []byte {
+	t.Helper()
+
+	var buffer bytes.Buffer
+	if err := tiff.Encode(&buffer, img, &tiff.Options{Compression: tiff.Uncompressed}); err != nil {
+		t.Fatalf("failed to encode tiff fixture: %v", err)
+	}
+
+	return buffer.Bytes()
+}
+
+func decodeJPEG(t *testing.T, data []byte) image.Image {
+	t.Helper()
+
+	img, err := jpeg.Decode(bytes.NewReader(data))
+	if err != nil {
+		t.Fatalf("failed to decode jpeg response: %v", err)
+	}
+
+	return img
+}
+
+func decodePNG(t *testing.T, data []byte) image.Image {
+	t.Helper()
+
+	img, err := png.Decode(bytes.NewReader(data))
+	if err != nil {
+		t.Fatalf("failed to decode png response: %v", err)
+	}
+
+	return img
+}
+
+func decodeWebP(t *testing.T, data []byte) image.Image {
+	t.Helper()
+
+	img, err := webp.Decode(bytes.NewReader(data))
+	if err != nil {
+		t.Fatalf("failed to decode webp response: %v", err)
+	}
+
+	return img
+}
+
+func decodeAVIF(t *testing.T, data []byte) image.Image {
+	t.Helper()
+
+	img, err := avif.Decode(bytes.NewReader(data), avif.Options{AutoRotate: true})
+	if err != nil {
+		t.Fatalf("failed to decode avif response: %v", err)
+	}
+
+	return img
+}
+
+func decodeHEIF(t *testing.T, data []byte) image.Image {
+	t.Helper()
+
+	ctx, err := heif.NewContext()
+	if err != nil {
+		t.Fatalf("failed to create heif context: %v", err)
+	}
+	if err := ctx.ReadFromMemory(data); err != nil {
+		t.Fatalf("failed to read heif response: %v", err)
+	}
+	handle, err := ctx.GetPrimaryImageHandle()
+	if err != nil {
+		t.Fatalf("failed to get heif primary handle: %v", err)
+	}
+	decoded, err := handle.DecodeImage(heif.ColorspaceRGB, heif.ChromaInterleavedRGBA, nil)
+	if err != nil {
+		t.Fatalf("failed to decode heif response: %v", err)
+	}
+	img, err := decoded.GetImage()
+	if err != nil {
+		t.Fatalf("failed to convert heif response: %v", err)
+	}
+
+	return img
+}
+
+func decodeGIF(t *testing.T, data []byte) image.Image {
+	t.Helper()
+
+	img, err := gif.Decode(bytes.NewReader(data))
+	if err != nil {
+		t.Fatalf("failed to decode gif response: %v", err)
+	}
+
+	return img
+}
+
+func decodeBMP(t *testing.T, data []byte) image.Image {
+	t.Helper()
+
+	img, err := bmp.Decode(bytes.NewReader(data))
+	if err != nil {
+		t.Fatalf("failed to decode bmp response: %v", err)
+	}
+
+	return img
+}
+
+func decodeTIFF(t *testing.T, data []byte) image.Image {
+	t.Helper()
+
+	img, err := tiff.Decode(bytes.NewReader(data))
+	if err != nil {
+		t.Fatalf("failed to decode tiff response: %v", err)
+	}
+
+	return img
+}
+
+func toRGBAFixture(img image.Image) *image.RGBA {
+	bounds := img.Bounds()
+	rgba := image.NewRGBA(image.Rect(0, 0, bounds.Dx(), bounds.Dy()))
+
+	for y := bounds.Min.Y; y < bounds.Max.Y; y++ {
+		for x := bounds.Min.X; x < bounds.Max.X; x++ {
+			rgba.Set(x-bounds.Min.X, y-bounds.Min.Y, img.At(x, y))
+		}
+	}
+
+	return rgba
+}
+
+func assertDimensions(t *testing.T, img image.Image, width, height int) {
+	t.Helper()
+
+	bounds := img.Bounds()
+	if bounds.Dx() != width || bounds.Dy() != height {
+		t.Fatalf("expected dimensions %dx%d, got %dx%d", width, height, bounds.Dx(), bounds.Dy())
+	}
 }

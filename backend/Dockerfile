@@ -4,21 +4,27 @@ FROM golang:1.27.1-alpine AS build
 
 WORKDIR /src
 
+RUN apk add --no-cache build-base libheif-dev libheif-libde265 libheif-x265 pkgconf
+
 COPY go.mod ./
 RUN go mod download
 
 COPY . .
-RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /out/go-image-optimizer ./cmd/api
+RUN CGO_ENABLED=1 GOOS=linux go build -trimpath -ldflags="-s -w" -o /out/go-image-optimizer ./cmd/api
 
-FROM gcr.io/distroless/static-debian12:nonroot
+FROM alpine:3.24
 
 WORKDIR /app
 
 ENV PORT=8080
 
-COPY --from=build --chown=nonroot:nonroot /out/go-image-optimizer /app/go-image-optimizer
+RUN apk add --no-cache libheif libheif-libde265 libheif-x265 \
+	&& addgroup -S optimizer \
+	&& adduser -S optimizer -G optimizer
 
-USER nonroot:nonroot
+COPY --from=build --chown=optimizer:optimizer /out/go-image-optimizer /app/go-image-optimizer
+
+USER optimizer:optimizer
 
 EXPOSE 8080
 
