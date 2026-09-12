@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/juniorosa/go-image-optimizer/backend/internal/config"
-	"github.com/juniorosa/go-image-optimizer/backend/internal/httpserver"
+	httpserver "github.com/juniorosa/go-image-optimizer/backend/internal/infrastructure/http"
 )
 
 func main() {
@@ -28,7 +28,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	server := httpserver.New(cfg, logger)
+	server := httpserver.NewServer(cfg, logger)
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
