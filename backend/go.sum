@@ -1,0 +1,4 @@
+github.com/FlavioCFOliveira/GoMetadata v1.3.0 h1:HfpNYa8uxzDy4DyJgIVb88LDg87mxnzen+Co8jZ1GnE=
+github.com/FlavioCFOliveira/GoMetadata v1.3.0/go.mod h1:3K+ZRFmsT6Xw0i/qp5I2HAhL2SiKlm77SYnwbW3Ji20=
+golang.org/x/text v0.35.0 h1:JOVx6vVDFokkpaq1AEptVzLTpDe9KGpj5tR4/X+ybL8=
+golang.org/x/text v0.35.0/go.mod h1:khi/HExzZJ2pGnjenulevKNX1W67CUy0AsXcNubPGCA=
