@@ -8,22 +8,16 @@ import (
 )
 
 type Config struct {
-	Port        string
-	StoragePath string
+	Port string
 }
 
 func Load() (Config, error) {
 	cfg := Config{
-		Port:        getEnv("PORT", "8080"),
-		StoragePath: getEnv("STORAGE_PATH", "./storage"),
+		Port: getEnv("PORT", "8080"),
 	}
 
 	if err := validatePort(cfg.Port); err != nil {
 		return Config{}, err
-	}
-
-	if cfg.StoragePath == "" {
-		return Config{}, fmt.Errorf("STORAGE_PATH cannot be empty")
 	}
 
 	return cfg, nil

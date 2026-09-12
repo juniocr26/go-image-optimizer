@@ -76,3 +76,34 @@ select {
   left: 0;
   top: -5px;
 }
+
+.indeterminate-progress {
+  animation: indeterminate-progress 1.2s ease-in-out infinite;
+}
+
+@keyframes indeterminate-progress {
+  0% {
+    transform: translateX(-110%);
+  }
+
+  50% {
+    transform: translateX(60%);
+  }
+
+  100% {
+    transform: translateX(210%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-spin,
+  .indeterminate-progress {
+    animation: none;
+  }
+
+  .indeterminate-progress {
+    opacity: 0.72;
+    transform: none;
+    width: 100%;
+  }
+}

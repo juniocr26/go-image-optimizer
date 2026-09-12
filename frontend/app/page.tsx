@@ -23,7 +23,7 @@ function HeroCopy() {
   return (
     <div className="mx-auto w-full max-w-[620px] lg:mx-0 lg:pl-8 xl:pl-12">
       <p className="mb-7 text-xs font-bold uppercase tracking-normal text-[#00a97b] sm:text-sm">
-        FAST &bull; SIMPLE &bull; OPEN SOURCE
+        JPG & PNG &bull; SIMPLE &bull; OPEN SOURCE
       </p>
 
       <h1 className="max-w-[650px] text-5xl font-black leading-[0.98] tracking-normal text-[#081236] sm:text-6xl lg:text-[70px]">
@@ -34,8 +34,8 @@ function HeroCopy() {
       </h1>
 
       <p className="mt-6 max-w-[520px] text-lg leading-8 tracking-normal text-[#60708d] sm:text-xl sm:leading-8">
-        Upload an image, send it to the Go backend and get the returned version
-        back. Simple, fast and focused on what matters.
+        Upload a JPG or PNG, compress it in the Go backend and download the
+        optimized result without storing the image on the server.
       </p>
 
       <ImageUploadForm />
@@ -112,8 +112,8 @@ function ImageComparisonPreview() {
       </div>
 
       <div className="handwritten pointer-events-none absolute right-[3%] top-0 hidden rotate-[-6deg] text-[25px] font-bold leading-[1.05] text-[#6f7f9d] sm:block lg:right-[7%] lg:top-[2%] lg:text-[29px]">
-        <p>Same quality</p>
-        <p>Smaller size</p>
+        <p>Same dimensions</p>
+        <p>Smaller when possible</p>
         <svg
           aria-hidden="true"
           className="absolute -right-12 top-11 h-24 w-20 rotate-[16deg] overflow-visible"
@@ -157,8 +157,8 @@ function ImageComparisonPreview() {
             strokeWidth="3"
           />
         </svg>
-        <p>Smaller files</p>
-        <p>A bigger impact</p>
+        <p>Measured sizes</p>
+        <p>Clear result</p>
       </div>
     </div>
   );
@@ -167,18 +167,18 @@ function ImageComparisonPreview() {
 function FeatureList() {
   const features = [
     {
-      title: "Fast",
-      description: "Optimized for performance using Go.",
+      title: "Focused",
+      description: "JPEG and PNG compression in the Go backend.",
       icon: <LightningIcon />,
     },
     {
-      title: "Simple",
-      description: "A clean and straightforward workflow.",
+      title: "Ephemeral",
+      description: "Images are returned directly to the browser.",
       icon: <ShieldIcon />,
     },
     {
-      title: "Open Source",
-      description: "Built to learn, share and evolve.",
+      title: "Transparent",
+      description: "Results show the actual measured file sizes.",
       icon: <ChartIcon />,
     },
   ];

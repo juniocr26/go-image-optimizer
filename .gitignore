@@ -40,7 +40,7 @@ frontend/npm-debug.log*
 backend/bin/
 backend/tmp/
 
-# Local generated image storage
+# Reserved local generated image storage; the current app does not persist uploads/results.
 storage/*
 !storage/.gitkeep
 

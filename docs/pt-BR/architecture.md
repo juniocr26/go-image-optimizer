@@ -1,106 +1,141 @@
 # Arquitetura
 
-Este documento descreve as decisões arquiteturais, os trade-offs e a evolução do Go Image Optimizer.
+Este documento descreve a arquitetura atual, os trade-offs e a evolução esperada do Go Image Optimizer.
 
-A arquitetura será desenvolvida de forma intencionalmente incremental. Novos componentes e padrões devem ser introduzidos em resposta a requisitos, limitações ou problemas técnicos concretos, e não apenas com base em uma complexidade antecipada.
+O projeto evolui de forma incremental. Novos componentes e padrões só devem ser introduzidos quando um requisito concreto ou uma limitação observada justificar essa complexidade.
 
 ## 1. Contexto
 
-Go Image Optimizer é uma aplicação para otimização de imagens com backend desenvolvido em Go e uma interface web construída com Next.js, React e Tailwind CSS.
+Go Image Optimizer é uma aplicação para otimização de imagens com backend em Go e interface web construída com Next.js, React e Tailwind CSS.
 
-O escopo inicial de desenvolvimento está focado exclusivamente na compressão de imagens.
+A implementação atual entrega o primeiro fluxo utilizável de compressão para:
 
-Outras funcionalidades de otimização estão planejadas, mas não serão consideradas parte da implementação atual até que sejam efetivamente desenvolvidas.
+- JPEG / JPG
+- PNG
 
-## 2. Requisitos atuais
+WebP, AVIF, redimensionamento, thumbnails, conversão de formato, histórico de processamento e processamento assíncrono ainda não fazem parte da implementação atual.
 
-Inicialmente, a aplicação deverá permitir que o usuário:
-
-1. Selecione uma imagem pela interface web.
-2. Envie a imagem para o backend em Go.
-3. Processe a imagem utilizando compressão.
-4. Receba a imagem comprimida como resultado.
-
-Neste estágio, a arquitetura deverá permanecer simples, mas fornecer uma base que possa evoluir conforme novos requisitos surgirem.
-
-## 3. Arquitetura inicial
-
-A arquitetura inicial consiste em um frontend web que se comunica com um backend em Go responsável pelo processamento da imagem.
-
-```mermaid
-flowchart LR
-    U[Usuário] --> F[Interface Web - Next.js]
-    F -->|Upload da imagem| API[Aplicação Go]
-    API --> C[Compressão da imagem]
-    C --> API
-    API -->|Imagem comprimida| F
-    F --> U
-```
-
-Inicialmente, a compressão da imagem será executada dentro da própria aplicação Go.
-
-Essa decisão evita a introdução de serviços adicionais antes que exista um requisito concreto que justifique sua complexidade arquitetural e operacional.
-
-## 4. Decisões arquiteturais
-
-As decisões abaixo serão documentadas conforme o projeto evoluir.
-
-### ADR-001 — Go para o backend
-
-A ser discutido e documentado.
-
-### ADR-002 — Next.js e React para a interface web
-
-A ser discutido e documentado.
-
-### ADR-003 — Tailwind CSS para estilização
-
-A ser discutido e documentado.
-
-### ADR-004 — Processamento de imagens dentro da aplicação Go
-
-A ser discutido e documentado.
-
-## 5. Fluxo da requisição
-
-Para a funcionalidade inicial de compressão de imagens, o fluxo esperado é:
+## 2. Fluxo atual da requisição
 
 ```mermaid
 sequenceDiagram
     actor User as Usuário
-    participant Frontend as Frontend Next.js
-    participant Backend as Backend Go
-    participant Processor as Compressor de Imagens
+    participant Browser as Interface no navegador
+    participant NextAPI as Rota API do Next.js
+    participant Handler as Handler HTTP em Go
+    participant UseCase as Caso de uso de compressão
+    participant Compressor as Implementação de compressão
 
-    User->>Frontend: Seleciona uma imagem
-    Frontend->>Backend: Envia a imagem
-    Backend->>Processor: Solicita a compressão
-    Processor-->>Backend: Retorna a imagem comprimida
-    Backend-->>Frontend: Retorna a imagem comprimida
-    Frontend-->>User: Disponibiliza o resultado
+    User->>Browser: Seleciona um JPG ou PNG
+    Browser->>Browser: Cria uma URL Blob temporária para preview
+    User->>Browser: Clica em Compress
+    Browser->>NextAPI: POST /api/images/compress
+    NextAPI->>Handler: POST /images/compress
+    Handler->>Handler: Valida multipart e limite de upload
+    Handler->>UseCase: Executa a compressão com os bytes da imagem
+    UseCase->>Compressor: Comprime JPEG ou PNG
+    Compressor-->>UseCase: Retorna bytes otimizados e metadados
+    UseCase-->>Handler: Retorna o resultado
+    Handler-->>NextAPI: Retorna os bytes da imagem otimizada
+    NextAPI-->>Browser: Repassa bytes e headers da resposta
+    Browser->>Browser: Cria uma URL Blob temporária para o resultado
+    Browser-->>User: Exibe medições reais e ação de download
 ```
 
-Esse fluxo representa a direção arquitetural atual e poderá mudar conforme as decisões de implementação forem tomadas.
+O navegador mantém o preview da imagem selecionada e o resultado comprimido apenas em estado React e URLs Blob. Essas URLs são revogadas quando são substituídas, quando o fluxo é reiniciado ou quando o componente é desmontado. Ao recarregar a página, a sessão atual desaparece de forma intencional.
 
-## 6. Limitações atuais
+## 3. Fronteiras no backend
 
-O projeto está em seu estágio inicial de desenvolvimento.
+O backend agora possui uma fronteira pequena, mas real, de aplicação:
 
-Características de performance, limites de concorrência, formatos de imagem suportados, estratégias de compressão, requisitos de armazenamento e limites de escalabilidade ainda não foram definidos ou validados.
+```text
+Handler HTTP
+    -> Caso de uso de compressão de imagem
+        -> Implementação de compressão de imagem
+```
 
-Esses aspectos serão documentados com base em decisões reais de implementação e medições, e não em suposições.
+Responsabilidades atuais:
 
-## 7. Evolução da arquitetura
+- Handler HTTP: leitura do multipart, limite de 25 MiB, validação dos campos, status codes, headers de resposta e geração do nome de download.
+- Caso de uso de compressão: execução da regra de aplicação e checagens de contexto, sem depender de HTTP ou tipos de multipart.
+- Implementação de compressão: identificação do conteúdo real, validação da imagem, proteção por dimensão, decode, encode específico por formato e configurações de compressão.
 
-A arquitetura deverá evoluir junto com o projeto.
+O projeto ainda não cria um modelo de domínio porque a funcionalidade atual não possui entidades de domínio relevantes. A interface do compressor existe como uma fronteira útil entre o caso de uso e a implementação de infraestrutura.
 
-Possíveis mudanças arquiteturais serão avaliadas quando novos requisitos ou limitações observadas fornecerem uma razão concreta para introduzir complexidade adicional.
+## 4. Comportamento da compressão
 
-Cada mudança arquitetural significativa deverá documentar:
+Imagens JPEG são decodificadas e reencodadas como JPEG com qualidade conservadora `82`. Essa compressão é lossy: a intenção é reduzir o tamanho do arquivo com baixa degradação visual perceptível para muitas imagens comuns. O valor fica nomeado no código para poder ser ajustado futuramente com base em medições e requisitos do produto.
 
-- O problema que está sendo resolvido.
-- As alternativas disponíveis.
-- Os trade-offs considerados.
-- A abordagem escolhida.
-- O raciocínio por trás da decisão.
-- As consequências da decisão.
+Imagens PNG são decodificadas e reencodadas como PNG usando o melhor nível de compressão PNG disponível na biblioteca padrão do Go. Esse processo é lossless para o conteúdo dos pixels e preserva as dimensões da imagem. A redução obtida em PNG depende muito de como o arquivo original foi codificado.
+
+A aplicação preserva as dimensões originais e o formato da resposta para imagens suportadas. Ela não promete que toda saída será menor; imagens já otimizadas podem ter pouca ou nenhuma redução.
+
+## 5. Ciclo de vida dos arquivos e armazenamento
+
+O ciclo de vida atual no backend é efêmero:
+
+```text
+Navegador
+    -> POST da imagem
+    -> Go recebe os bytes
+    -> Go comprime em memória
+    -> Go retorna os bytes otimizados
+    -> Navegador mantém o resultado temporariamente
+    -> Usuário baixa o resultado
+```
+
+Imagens enviadas e imagens comprimidas não são persistidas em armazenamento da aplicação. O backend não cria IDs de processamento, registros em banco de dados, registros no Redis, objetos em storage, URLs de resultado para busca posterior ou histórico de processamento.
+
+Arquivos temporários de multipart, caso a biblioteca padrão crie algum durante o parsing da requisição, são removidos com `MultipartForm.RemoveAll()` antes do fim da requisição.
+
+Essa é uma decisão atual do MVP, não uma rejeição permanente ao uso de armazenamento. Versões futuras podem introduzir armazenamento temporário ou persistente se processamento assíncrono, recuperação posterior, maior vazão ou histórico justificarem isso.
+
+## 6. Processamento síncrono
+
+Hoje a compressão roda de forma síncrona dentro da requisição HTTP em Go porque o MVP precisa apenas receber, processar e devolver a imagem imediatamente.
+
+A aplicação não declara características de alta vazão ou escalabilidade. Qualquer afirmação desse tipo precisa ser medida em cargas realistas antes de entrar na documentação.
+
+Proteções leves de recursos na implementação atual:
+
+- O corpo da requisição é limitado a 25 MiB.
+- O parsing multipart mantém até 8 MiB em memória antes de a biblioteca padrão poder usar arquivos temporários.
+- As dimensões decodificadas são limitadas a 32 megapixels para reduzir riscos óbvios de expansão excessiva na decodificação.
+
+## 7. Ciclo de vida no frontend
+
+O frontend mantém o fluxo em estado React:
+
+- drop zone inicial;
+- preview da imagem selecionada e tamanho original;
+- ação explícita de Compress;
+- estado de carregamento indeterminado;
+- preview do resultado, medições reais em bytes, cálculo de redução e ação de download;
+- reinício do fluxo para outra imagem.
+
+A interface não persiste a sessão em `localStorage`, IndexedDB, armazenamento do backend ou qualquer outro armazenamento durável. Após recarregar a página, a imagem selecionada e o resultado desaparecem por decisão do MVP.
+
+## 8. Limitações atuais
+
+- Apenas JPEG/JPG e PNG são suportados.
+- A compressão JPEG é lossy.
+- A compressão PNG é lossless para pixels, mas a redução depende da codificação original.
+- A preservação de metadados não é garantida.
+- O backend retorna o resultado de forma síncrona e não expõe eventos reais de progresso, então o frontend mostra um indicador indeterminado.
+- Algumas saídas podem ter o mesmo tamanho ou ficar maiores que o arquivo enviado.
+- Não há histórico, busca por ID, worker em background, fila, object storage ou limpeza por TTL.
+
+## 9. Possível evolução
+
+Se requisitos futuros exigirem processamento assíncrono, arquivos maiores, formatos mais pesados, maior vazão, compartilhamento de resultados ou histórico, a arquitetura pode evoluir para algo como:
+
+```text
+Upload
+    -> ID de processamento
+    -> Fila / worker
+    -> Armazenamento temporário ou object storage
+    -> Recuperação do resultado
+    -> Limpeza por TTL
+```
+
+Essa direção deve ser introduzida somente com requisitos claros e trade-offs documentados sobre armazenamento, retenção, limpeza, observabilidade, segurança e custo operacional.

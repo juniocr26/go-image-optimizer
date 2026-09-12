@@ -23,18 +23,13 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err := os.MkdirAll(cfg.StoragePath, 0o755); err != nil {
-		logger.Error("failed to prepare storage directory", "path", cfg.StoragePath, "error", err)
-		os.Exit(1)
-	}
-
 	server := httpserver.NewServer(cfg, logger)
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
 	go func() {
-		logger.Info("starting http server", "address", server.Addr, "storage_path", cfg.StoragePath)
+		logger.Info("starting http server", "address", server.Addr)
 		if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			logger.Error("http server failed", "error", err)
 			stop()
