@@ -26,6 +26,23 @@ go.work.sum
 
 # env file
 .env
+.env.local
+.env.*.local
+
+# Frontend dependencies and build output
+node_modules/
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/npm-debug.log*
+
+# Backend build output
+backend/bin/
+backend/tmp/
+
+# Local generated image storage
+storage/*
+!storage/.gitkeep
 
 # Editor/IDE
 .idea/

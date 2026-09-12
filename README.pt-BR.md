@@ -51,12 +51,12 @@ flowchart LR
 
 Essa arquitetura é intencionalmente simples. Novos componentes ou serviços serão introduzidos somente quando requisitos ou limitações observadas justificarem a complexidade adicional.
 
-Para conhecer as decisões arquiteturais e seus trade-offs, consulte [Arquitetura](docs/architecture.pt-BR.md).
+Para conhecer as decisões arquiteturais e seus trade-offs, consulte [Arquitetura](docs/pt-BR/architecture.md).
 
 ## Documentação
 
-- [Architecture — English](docs/architecture.md)
-- [Arquitetura](docs/architecture.pt-BR.md)
+- [Architecture - English](docs/en/architecture.md)
+- [Arquitetura](docs/pt-BR/architecture.md)
 - [README — English](README.md)
 
 ## Roadmap
