@@ -23,14 +23,14 @@ Automated backend tests cover:
 - animated GIF frame count, delays, and loop behavior;
 - animated WebP frame count and frame durations;
 - JPEG EXIF orientation normalization;
-- unsupported input is rejected;
+- unsupported input is rejected, including camera RAW signatures;
 - corrupted image content is rejected for every supported format signature;
 - decoded pixel safety limit behavior for every supported format;
 - animated canvas-frame pixel safety limits;
 - missing image field validation;
 - malformed multipart requests;
 - non-multipart requests;
-- 25 MiB request-size protection;
+- 50 MiB request-size protection;
 - successful HTTP response headers;
 - generated download filenames;
 - extension spoofing, where response type follows detected bytes rather than the uploaded filename.

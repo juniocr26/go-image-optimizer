@@ -23,14 +23,14 @@ Os testes automatizados do backend cobrem:
 - quantidade de frames, delays e loop de GIF animado;
 - quantidade de frames e duração dos frames de WebP animado;
 - normalização de orientação EXIF em JPEG;
-- entrada não suportada é rejeitada;
+- entrada não suportada é rejeitada, incluindo assinaturas de RAW de câmera;
 - imagem corrompida é rejeitada para cada assinatura de formato suportado;
 - limite de segurança por quantidade de pixels decodificados para todos os formatos suportados;
 - limite de segurança para pixels de canvas-frame em animações;
 - validação de campo de imagem ausente;
 - requisições multipart malformadas;
 - requisições que não são multipart;
-- proteção do limite de 25 MiB da requisição;
+- proteção do limite de 50 MiB da requisição;
 - headers de resposta em sucesso;
 - nomes de download gerados;
 - spoofing de extensão, em que o tipo de resposta segue os bytes detectados e não o nome enviado.

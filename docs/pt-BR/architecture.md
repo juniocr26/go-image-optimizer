@@ -62,7 +62,7 @@ Handler HTTP
 
 Responsabilidades atuais:
 
-- Handler HTTP: leitura do multipart, limite de 25 MiB, validação dos campos, status codes, headers de resposta e geração do nome de download.
+- Handler HTTP: leitura do multipart, limite de 50 MiB, validação dos campos, status codes, headers de resposta e geração do nome de download.
 - Caso de uso de compressão: execução da regra de aplicação e checagens de contexto, sem depender de HTTP ou tipos de multipart.
 - Implementação de compressão: identificação do conteúdo real pelos bytes, validação da imagem, proteção por dimensão e por animação, decode, encode específico por formato e configurações de compressão.
 
@@ -70,7 +70,7 @@ O projeto ainda não cria um modelo de domínio porque a funcionalidade atual n�
 
 ## 4. Detecção de formato
 
-O backend não confia na extensão do arquivo nem no MIME type informado pelo navegador. Ele inspeciona os bytes enviados e aceita apenas assinaturas e marcas de container conhecidas para os formatos suportados.
+O backend não confia na extensão do arquivo nem no MIME type informado pelo navegador. Ele inspeciona os bytes enviados e aceita apenas assinaturas e marcas de container conhecidas para os formatos suportados. Assinaturas de RAW de câmera, incluindo containers RAW baseados em TIFF como DNG e CR2, são rejeitadas em vez de serem direcionadas ao compressor TIFF.
 
 Por isso, um JPEG enviado como `sample.png` ainda é processado como JPEG e retorna com extensão de download JPEG. Um arquivo chamado `broken.webp` com bytes que não são WebP é rejeitado em vez de ser encaminhado ao codec WebP.
 
@@ -120,7 +120,7 @@ A aplicação não declara características de alta vazão ou escalabilidade. Qu
 
 Proteções atuais de recursos:
 
-- O corpo da requisição é limitado a 25 MiB.
+- O corpo da requisição é limitado a 50 MiB.
 - O parsing multipart mantém até 8 MiB em memória antes de a biblioteca padrão poder usar arquivos temporários.
 - As dimensões decodificadas são limitadas a 32 megapixels.
 - GIF animado, WebP animado e AVIF com múltiplos frames são limitados por `largura * altura * quantidade de frames`, com limite padrão de 64 milhões de pixels de canvas-frame.

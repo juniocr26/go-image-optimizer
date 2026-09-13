@@ -9,7 +9,7 @@ import {
   useState,
 } from "react";
 
-const MAX_UPLOAD_BYTES = 25 * 1024 * 1024;
+const MAX_UPLOAD_BYTES = 50 * 1024 * 1024;
 const SUPPORTED_FORMAT_COPY =
   "JPG, PNG, WebP, AVIF, HEIC, GIF, BMP and TIFF";
 const SUPPORTED_IMAGE_TYPES = new Set([
@@ -123,7 +123,7 @@ export function ImageUploadForm() {
       setSelectedFile(null);
       setPreviewUrl(null);
       setPreviewFailed(false);
-      setError("The selected image is larger than 25 MiB.");
+      setError("The selected image is larger than 50 MiB.");
       return;
     }
 
@@ -305,7 +305,7 @@ export function ImageUploadForm() {
               {selectedFile ? "Review the file and start when ready" : "or click to select a file"}
             </p>
             <p className="mt-5 text-sm leading-6 text-[#60708d] sm:text-base">
-              {SUPPORTED_FORMAT_COPY}, up to 25 MiB.
+              {SUPPORTED_FORMAT_COPY}, up to 50 MiB.
             </p>
 
             {selectedFile ? (

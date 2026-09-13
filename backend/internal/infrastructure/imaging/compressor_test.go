@@ -193,6 +193,9 @@ func TestCompressorPreservesGIFAnimationFramesAndTiming(t *testing.T) {
 	if decoded.LoopCount != 0 {
 		t.Fatalf("expected infinite GIF loop count, got %d", decoded.LoopCount)
 	}
+	if len(decoded.Disposal) != 2 || decoded.Disposal[0] != gif.DisposalNone || decoded.Disposal[1] != gif.DisposalBackground {
+		t.Fatalf("expected GIF disposal [none background], got %v", decoded.Disposal)
+	}
 }
 
 func TestCompressorPreservesAnimatedWebPFramesAndTiming(t *testing.T) {
@@ -291,6 +294,28 @@ func TestCompressorRejectsUnsupportedInput(t *testing.T) {
 
 	if !errors.Is(err, imagecompression.ErrUnsupportedFormat) {
 		t.Fatalf("expected ErrUnsupportedFormat, got %v", err)
+	}
+}
+
+func TestCompressorRejectsUnsupportedCameraRAWInput(t *testing.T) {
+	tests := []struct {
+		name  string
+		input []byte
+	}{
+		{name: "dng", input: minimalDNG()},
+		{name: "cr2", input: []byte{'I', 'I', '*', 0, 0x10, 0, 0, 0, 'C', 'R', 0x02, 0}},
+		{name: "cr3", input: corruptBMFF("crx ")},
+		{name: "raf", input: []byte("FUJIFILMCCD-RAW 0201")},
+		{name: "rw2", input: []byte{'I', 'I', 'U', 0, 0x18, 0, 0, 0}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := NewCompressor().Compress(tt.input)
+			if !errors.Is(err, imagecompression.ErrUnsupportedFormat) {
+				t.Fatalf("expected ErrUnsupportedFormat, got %v", err)
+			}
+		})
 	}
 }
 
@@ -769,6 +794,21 @@ func corruptBMFF(brand string) []byte {
 	copy(data[20:24], "junk")
 
 	return data
+}
+
+func minimalDNG() []byte {
+	var data bytes.Buffer
+
+	data.Write([]byte{'I', 'I', '*', 0})
+	_ = binary.Write(&data, binary.LittleEndian, uint32(8))
+	_ = binary.Write(&data, binary.LittleEndian, uint16(1))
+	_ = binary.Write(&data, binary.LittleEndian, uint16(0xc612))
+	_ = binary.Write(&data, binary.LittleEndian, uint16(1))
+	_ = binary.Write(&data, binary.LittleEndian, uint32(4))
+	data.Write([]byte{1, 4, 0, 0})
+	_ = binary.Write(&data, binary.LittleEndian, uint32(0))
+
+	return data.Bytes()
 }
 
 func assertDimensions(t *testing.T, img image.Image, width, height int) {

@@ -16,7 +16,7 @@ import (
 )
 
 const (
-	maxImageUploadBytes = 25 << 20
+	maxImageUploadBytes = 50 << 20
 	maxMultipartMemory  = 8 << 20
 )
 
@@ -26,6 +26,13 @@ type compressImageUseCase interface {
 
 func ProcessImage(logger *slog.Logger, useCase compressImageUseCase) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		defer func() {
+			if recovered := recover(); recovered != nil {
+				logger.Error("image compression request panicked", "panic", recovered)
+				writeJSONError(w, http.StatusInternalServerError, "image could not be compressed")
+			}
+		}()
+
 		mediaType, _, err := mime.ParseMediaType(r.Header.Get("Content-Type"))
 		if err != nil || mediaType != "multipart/form-data" {
 			writeJSONError(w, http.StatusBadRequest, "request must be multipart/form-data")

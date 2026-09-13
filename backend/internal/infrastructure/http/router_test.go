@@ -2,6 +2,8 @@ package httpserver
 
 import (
 	"bytes"
+	"encoding/binary"
+	"hash/crc32"
 	"image"
 	"image/color"
 	"image/gif"
@@ -205,6 +207,41 @@ func TestProcessImageNormalizesMismatchedFilenameExtensionsFromContent(t *testin
 			input:        encodeWebPFixture(t, source),
 			downloadName: "sample_compressed.webp",
 		},
+		{
+			name:         "avif named jpg",
+			filename:     "sample.jpg",
+			contentType:  "image/jpeg",
+			input:        encodeAVIFFixture(t, source),
+			downloadName: "sample_compressed.avif",
+		},
+		{
+			name:         "heic named png",
+			filename:     "sample.png",
+			contentType:  "image/png",
+			input:        encodeHEIFFixture(t, source),
+			downloadName: "sample_compressed.heic",
+		},
+		{
+			name:         "gif named webp",
+			filename:     "sample.webp",
+			contentType:  "image/webp",
+			input:        encodeGIFFixture(t, source),
+			downloadName: "sample_compressed.gif",
+		},
+		{
+			name:         "bmp named tiff",
+			filename:     "sample.tiff",
+			contentType:  "image/tiff",
+			input:        encodeBMPFixture(t, source),
+			downloadName: "sample_compressed.bmp",
+		},
+		{
+			name:         "tiff named jpeg",
+			filename:     "sample.jpeg",
+			contentType:  "image/jpeg",
+			input:        encodeTIFFFixture(t, source),
+			downloadName: "sample_compressed.tiff",
+		},
 	}
 
 	for _, tt := range tests {
@@ -303,6 +340,21 @@ func TestProcessImageRejectsUnsupportedFormat(t *testing.T) {
 	}
 }
 
+func TestProcessImageRejectsUnsupportedRAWInput(t *testing.T) {
+	request := newMultipartImageRequest(t, "image", "photo.tiff", "image/tiff", minimalDNGFixture())
+	response := httptest.NewRecorder()
+
+	NewRouter(testLogger()).ServeHTTP(response, request)
+
+	if response.Code != http.StatusUnsupportedMediaType {
+		t.Fatalf("expected status %d, got %d", http.StatusUnsupportedMediaType, response.Code)
+	}
+
+	if !strings.Contains(response.Body.String(), "unsupported image format") {
+		t.Fatalf("expected unsupported format error, got %q", response.Body.String())
+	}
+}
+
 func TestProcessImageDoesNotTrustFilenameExtension(t *testing.T) {
 	request := newMultipartImageRequest(t, "image", "broken.webp", "image/webp", []byte("not a webp"))
 	response := httptest.NewRecorder()
@@ -315,6 +367,21 @@ func TestProcessImageDoesNotTrustFilenameExtension(t *testing.T) {
 
 	if !strings.Contains(response.Body.String(), "unsupported image format") {
 		t.Fatalf("expected unsupported format error, got %q", response.Body.String())
+	}
+}
+
+func TestProcessImageRejectsEmptyImage(t *testing.T) {
+	request := newMultipartImageRequest(t, "image", "empty.png", "image/png", nil)
+	response := httptest.NewRecorder()
+
+	NewRouter(testLogger()).ServeHTTP(response, request)
+
+	if response.Code != http.StatusBadRequest {
+		t.Fatalf("expected status %d, got %d", http.StatusBadRequest, response.Code)
+	}
+
+	if !strings.Contains(response.Body.String(), "uploaded image is empty") {
+		t.Fatalf("expected empty image error, got %q", response.Body.String())
 	}
 }
 
@@ -335,7 +402,7 @@ func TestProcessImageRejectsCorruptedImage(t *testing.T) {
 }
 
 func TestProcessImageRejectsRequestsAboveUploadLimit(t *testing.T) {
-	oversizedPayload := bytes.Repeat([]byte("a"), 25<<20)
+	oversizedPayload := bytes.Repeat([]byte("a"), 50<<20)
 	request := newMultipartImageRequest(t, "image", "large.png", "image/png", oversizedPayload)
 	response := httptest.NewRecorder()
 
@@ -348,6 +415,25 @@ func TestProcessImageRejectsRequestsAboveUploadLimit(t *testing.T) {
 	if !strings.Contains(response.Body.String(), "uploaded image is too large") {
 		t.Fatalf("expected size limit error, got %q", response.Body.String())
 	}
+}
+
+func TestProcessImageAcceptsValidImageNearUploadLimit(t *testing.T) {
+	payload := largePNGFixture(t, (50<<20)-4096)
+	request := newMultipartImageRequest(t, "image", "near-limit.png", "image/png", payload)
+	response := httptest.NewRecorder()
+
+	NewRouter(testLogger()).ServeHTTP(response, request)
+
+	if response.Code != http.StatusOK {
+		t.Fatalf("expected status %d, got %d with body %q", http.StatusOK, response.Code, response.Body.String())
+	}
+
+	if got := response.Header().Get("Content-Type"); got != "image/png" {
+		t.Fatalf("expected Content-Type %q, got %q", "image/png", got)
+	}
+
+	decoded := decodePNG(t, response.Body.Bytes())
+	assertDimensions(t, decoded, 1, 1)
 }
 
 func newMultipartImageRequest(t *testing.T, fieldName, filename, contentType string, payload []byte) *http.Request {
@@ -519,6 +605,64 @@ func encodeTIFFFixture(t *testing.T, img image.Image) []byte {
 	}
 
 	return buffer.Bytes()
+}
+
+func largePNGFixture(t *testing.T, targetSize int) []byte {
+	t.Helper()
+
+	base := encodePNGFixture(t, testImage(1, 1), png.BestCompression)
+	iendTypeOffset := bytes.LastIndex(base, []byte("IEND"))
+	if iendTypeOffset < 4 {
+		t.Fatal("png fixture does not contain IEND chunk")
+	}
+
+	chunkStart := iendTypeOffset - 4
+	textPrefix := []byte("Comment\x00")
+	fillerSize := targetSize - len(base) - 12 - len(textPrefix)
+	if fillerSize < 0 {
+		t.Fatalf("target PNG size %d is too small", targetSize)
+	}
+
+	text := make([]byte, 0, len(textPrefix)+fillerSize)
+	text = append(text, textPrefix...)
+	text = append(text, bytes.Repeat([]byte("x"), fillerSize)...)
+	textChunk := pngChunk("tEXt", text)
+
+	output := make([]byte, 0, len(base)+len(textChunk))
+	output = append(output, base[:chunkStart]...)
+	output = append(output, textChunk...)
+	output = append(output, base[chunkStart:]...)
+
+	if len(output) != targetSize {
+		t.Fatalf("expected large PNG size %d, got %d", targetSize, len(output))
+	}
+
+	return output
+}
+
+func pngChunk(chunkType string, data []byte) []byte {
+	chunk := make([]byte, 12+len(data))
+	binary.BigEndian.PutUint32(chunk[:4], uint32(len(data)))
+	copy(chunk[4:8], chunkType)
+	copy(chunk[8:8+len(data)], data)
+	binary.BigEndian.PutUint32(chunk[8+len(data):], crc32.ChecksumIEEE(chunk[4:8+len(data)]))
+
+	return chunk
+}
+
+func minimalDNGFixture() []byte {
+	var data bytes.Buffer
+
+	data.Write([]byte{'I', 'I', '*', 0})
+	_ = binary.Write(&data, binary.LittleEndian, uint32(8))
+	_ = binary.Write(&data, binary.LittleEndian, uint16(1))
+	_ = binary.Write(&data, binary.LittleEndian, uint16(0xc612))
+	_ = binary.Write(&data, binary.LittleEndian, uint16(1))
+	_ = binary.Write(&data, binary.LittleEndian, uint32(4))
+	data.Write([]byte{1, 4, 0, 0})
+	_ = binary.Write(&data, binary.LittleEndian, uint32(0))
+
+	return data.Bytes()
 }
 
 func decodeJPEG(t *testing.T, data []byte) image.Image {

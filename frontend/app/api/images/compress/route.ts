@@ -1,5 +1,7 @@
 export const runtime = "nodejs";
 
+const MAX_UPLOAD_BYTES = 50 * 1024 * 1024;
+
 export async function POST(request: Request) {
   const backendUrl = process.env.BACKEND_URL ?? "http://localhost:8080";
 
@@ -9,6 +11,14 @@ export async function POST(request: Request) {
     formData = await request.formData();
   } catch {
     return Response.json({ error: "Invalid multipart form." }, { status: 400 });
+  }
+
+  const image = formData.get("image");
+  if (image instanceof File && image.size > MAX_UPLOAD_BYTES) {
+    return Response.json(
+      { error: "The selected image is larger than 50 MiB." },
+      { status: 413 },
+    );
   }
 
   try {

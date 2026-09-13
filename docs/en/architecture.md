@@ -62,7 +62,7 @@ HTTP Handler
 
 Current responsibilities:
 
-- HTTP handler: multipart parsing, the 25 MiB request limit, field validation, status codes, response headers, and download filename generation.
+- HTTP handler: multipart parsing, the 50 MiB request limit, field validation, status codes, response headers, and download filename generation.
 - Compress Image use case: application-level execution and context checks, independent of HTTP and multipart types.
 - Image compression implementation: byte-based format detection, image validation, dimension and animation safety checks, decoding, format-specific encoding, and compression settings.
 
@@ -70,7 +70,7 @@ The code does not introduce a domain model yet because the current feature does 
 
 ## 4. Format Detection
 
-The backend does not trust the filename extension or the browser-provided MIME type. It inspects the uploaded bytes and accepts only known signatures and container brands for the supported formats.
+The backend does not trust the filename extension or the browser-provided MIME type. It inspects the uploaded bytes and accepts only known signatures and container brands for the supported formats. Camera RAW signatures, including TIFF-based RAW containers such as DNG and CR2, are rejected instead of being routed through the TIFF compressor.
 
 This is why a JPEG uploaded as `sample.png` is still processed as JPEG and returned with a JPEG download extension. A file named `broken.webp` with non-WebP bytes is rejected instead of being routed to the WebP codec.
 
@@ -120,7 +120,7 @@ The application does not claim high-throughput or scalability characteristics. T
 
 Current resource protections:
 
-- Request body size is limited to 25 MiB.
+- Request body size is limited to 50 MiB.
 - Multipart in-memory parsing is limited to 8 MiB before the standard library may spill to temporary files.
 - Decoded image dimensions are limited to 32 megapixels.
 - Animated GIF, animated WebP, and multi-frame AVIF are limited by `width * height * frame count`, with a default cap of 64 million canvas-frame pixels.
