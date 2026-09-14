@@ -18,9 +18,11 @@ services:
     working_dir: /src
     environment:
       CGO_ENABLED: 1
+      REAL_IMAGE_FIXTURES_DIR: /testdata/images
     volumes:
       - ./backend:/src
-    command: ["go", "test", "./..."]
+      - ./storage/testdata/images:/testdata/images:ro
+    command: ["go", "test", "-v", "./..."]
 
   frontend:
     build:

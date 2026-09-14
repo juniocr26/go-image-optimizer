@@ -4,7 +4,7 @@ This document describes the current testing strategy for Go Image Optimizer.
 
 ## Strategy
 
-The backend has automated Go tests for the application boundary, image compression implementation, and HTTP contract. The frontend currently relies on the production build plus manual workflow validation; no frontend test framework has been added for this MVP.
+The backend has automated Go tests for the application boundary, image compression implementation, HTTP contract, deterministic codec regressions, and real-file integration fixtures. The frontend currently relies on the production build plus manual workflow validation; no frontend test framework has been added for this MVP.
 
 The tests avoid a universal assertion that every optimized image must be smaller. Some real images are already optimized. Size-reduction assertions are limited to deterministic fixtures created specifically for that purpose.
 
@@ -15,6 +15,7 @@ Automated backend tests cover:
 - compress image use case behavior;
 - canceled context handling;
 - valid compression for JPEG/JPG, PNG, WebP, AVIF, HEIC/HEIF, GIF, BMP, and TIFF;
+- real fixture compression for files in `storage/testdata/images`;
 - compressed output byte detection for every supported static format;
 - output images can be decoded;
 - dimensions are preserved;
@@ -40,18 +41,21 @@ Automated backend tests cover:
 
 | Format | Compression invoked | Output decoded | Format preserved | Dimensions checked | Specific properties checked |
 | --- | --- | --- | --- | --- | --- |
-| JPEG / JPG | Real compressor and HTTP route with deterministic JPEG bytes | `jpeg.Decode` | `FormatJPEG`, `image/jpeg`, detected output bytes, `.jpg` / `.jpeg` filenames | Yes | EXIF orientation normalization and deterministic high-quality size reduction fixture |
-| PNG | Real compressor and HTTP route with deterministic PNG bytes | `png.Decode` | `FormatPNG`, `image/png`, detected output bytes | Yes | Lossless pixel and alpha preservation |
-| WebP | Real compressor and HTTP route with deterministic static WebP bytes; animated path also exercised | `webp.Decode`; `animation.Decode` for animated output | `FormatWebP`, `image/webp`, detected output bytes | Yes | Lossless transparency, animated frame count, and frame durations |
-| AVIF | Real compressor and HTTP route with deterministic AVIF bytes | `avif.Decode` | `FormatAVIF`, `image/avif`, detected output bytes | Yes | Real AVIF encode/decode path; no unsupported variant behavior is invented |
-| HEIC / HEIF | Real compressor and HTTP route with deterministic libheif/HEVC bytes | libheif primary-image decode | `FormatHEIF`, HEIC/HEIF family detection, `.heic` / `.heif` filename handling | Yes | Native libheif/HEVC encode/decode path is exercised |
-| GIF | Real compressor and HTTP route with deterministic static GIF bytes; animated path also exercised | `gif.Decode`; `gif.DecodeAll` for animated output | `FormatGIF`, `image/gif`, detected output bytes | Yes | Animated frame count, delays, loop count, and disposal values |
-| BMP | Real compressor and HTTP route with deterministic BMP bytes | `bmp.Decode` | `FormatBMP`, `image/bmp`, detected output bytes | Yes | Successful BMP re-encode without requiring size reduction |
-| TIFF | Real compressor and HTTP route with deterministic TIFF bytes | `tiff.Decode` | `FormatTIFF`, `image/tiff`, detected output bytes, `.tif` / `.tiff` filenames | Yes | TIFF re-encode with Deflate compression; RAW/DNG spoofing remains rejected |
+| JPEG / JPG | Real compressor with synthetic bytes and `sample.jpg`; HTTP route with synthetic JPEG bytes | `jpeg.Decode` | `FormatJPEG`, `image/jpeg`, detected output bytes, `.jpg` / `.jpeg` filenames | Yes | EXIF orientation normalization and deterministic high-quality size reduction fixture |
+| PNG | Real compressor with synthetic bytes and `sample.png`; HTTP route with synthetic PNG bytes | `png.Decode` | `FormatPNG`, `image/png`, detected output bytes | Yes | Lossless pixel and alpha preservation for synthetic fixture; real fixture pixel equality after re-encode |
+| WebP | Real compressor with synthetic bytes and `sample.webp`; animated synthetic path also exercised | `webp.Decode`; `animation.Decode` when animated | `FormatWebP`, `image/webp`, detected output bytes | Yes | Lossless transparency for synthetic fixture; animated frame count and frame durations |
+| AVIF | Real compressor with synthetic bytes and `sample.avif` | `avif.Decode`; `avif.DecodeAll` for frame metadata | `FormatAVIF`, `image/avif`, detected output bytes | Yes | Static AVIF real fixture; multi-frame behavior is not claimed beyond codec-supported routing |
+| HEIC | Real compressor with synthetic libheif bytes and `sample.heic` | libheif primary-image decode | `FormatHEIF`, `image/heic`, detected output bytes | Yes | Native libheif/HEVC encode/decode path is exercised |
+| HEIF | Real compressor with `sample.heif` | libheif primary-image decode | `FormatHEIF`, detected HEIC/HEIF family output | Yes | Separate versioned `.heif` file is accepted by the native HEIF path |
+| GIF | Real compressor with synthetic bytes and `sample.gif`; animated synthetic path also exercised | `gif.Decode`; `gif.DecodeAll` for animation metadata | `FormatGIF`, `image/gif`, detected output bytes | Yes | Animated synthetic frame count, delays, loop count, and disposal values; real fixture GIF metadata remains valid |
+| BMP | Real compressor with synthetic bytes and `sample.bmp` | `bmp.Decode` | `FormatBMP`, `image/bmp`, detected output bytes | Yes | Successful BMP re-encode without requiring size reduction |
+| TIFF | Real compressor with synthetic bytes and `sample.tiff`; HTTP route covers `.tif` / `.tiff` filenames | `tiff.Decode` | `FormatTIFF`, `image/tiff`, detected output bytes | Yes | TIFF re-encode with Deflate compression; RAW/DNG spoofing remains rejected |
 
 ## Test Image Strategy
 
-The normal test suite does not download images at runtime. Test images are deterministic and generated by helpers in the Go tests:
+The normal test suite does not download images at runtime.
+
+Synthetic test images are deterministic and generated by helpers in the Go tests:
 
 - gradients and detailed pixel patterns for static codec coverage;
 - alpha/transparency patterns for PNG and lossless WebP;
@@ -59,7 +63,21 @@ The normal test suite does not download images at runtime. Test images are deter
 - a deterministic large PNG payload for upload-limit behavior;
 - HEIC/HEIF source bytes generated through libheif and HEVC in a test temp directory.
 
-There are currently no committed binary image fixtures. HEIC/HEIF tests require native libheif development libraries and the HEVC decoder/encoder plugins because the test fixture and compressed output both use the real native codec path.
+Real integration fixtures are versioned under `storage/testdata/images`:
+
+- `sample.jpg`
+- `sample.png`
+- `sample.webp`
+- `sample.avif`
+- `sample.heic`
+- `sample.heif`
+- `sample.gif`
+- `sample.bmp`
+- `sample.tiff`
+
+These fixtures are committed test inputs, not application storage. The real-file tests read them, compress them, validate the returned bytes, and discard the compressed output in memory. Tests must not write generated files back into `storage/testdata/images`.
+
+HEIC/HEIF tests require native libheif development libraries and the HEVC decoder/encoder plugins because both synthetic HEIC generation and real HEIC/HEIF compression use the native codec path.
 
 ## Frontend Validation
 
@@ -86,24 +104,32 @@ Manual UI validation should cover:
 Recommended backend tests with Docker Compose:
 
 ```bash
-docker compose run --build --rm backend-test
+docker compose run --rm backend-test
 ```
 
-This uses the `backend-test` Compose service, which targets the Go build stage from `backend/Dockerfile`. That image contains the Go toolchain, CGO build tools, `pkgconf`, libheif development headers, `libheif-libde265`, and `libheif-x265`. The service mounts `./backend` at `/src`, so source edits are tested without rebuilding the production runtime image.
+This uses the `backend-test` Compose service, which targets the Go build stage from `backend/Dockerfile`. That image contains the Go toolchain, CGO build tools, `pkgconf`, libheif development headers, `libheif-libde265`, and `libheif-x265`. The service mounts `./backend` at `/src` and mounts `./storage/testdata/images` read-only at `/testdata/images`, so source edits and versioned real fixtures are visible without rebuilding the production runtime image.
 
 The `backend-test` service is behind the `test` profile and is not started by normal `docker compose up`. The backend API container does not need to be running for the test command above. If the project is already running, run the test command from another terminal.
+
+Build the test image once during initial setup or after changing `backend/Dockerfile`, native packages, Go version, `go.mod`, or `go.sum`:
+
+```bash
+docker compose build backend-test
+```
+
+The default test command runs `go test -v ./...`, so package names, test names, subtest names, and per-format subtests are visible. Lines such as `? github.com/.../cmd/api [no test files]` are normal Go output for packages that intentionally have no test files; they are not failures.
 
 To pass custom Go test flags through the same environment:
 
 ```bash
-docker compose run --build --rm backend-test go test -v ./internal/infrastructure/imaging -run TestCompressorCompressesSupportedStaticFormats
+docker compose run --rm backend-test go test -v ./internal/infrastructure/imaging -run TestCompressorRealFixtures
 ```
 
 Backend tests with a local Go toolchain remain supported when the matching native dependencies are installed locally:
 
 ```bash
 cd backend
-CGO_ENABLED=1 go test ./...
+CGO_ENABLED=1 go test -v ./...
 ```
 
 Local HEIC/HEIF tests require native libheif development libraries and HEVC codec plugins. Docker Compose is the recommended path when those are not installed locally.

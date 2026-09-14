@@ -19,6 +19,7 @@ A imagem Docker do backend usa:
 - estágio de build Alpine com `CGO_ENABLED=1`;
 - `libheif-dev`, `libheif-libde265` e `libheif-x265` durante o build;
 - runtime Alpine com `libheif`, `libheif-libde265` e `libheif-x265`;
+- serviço Compose `backend-test` baseado no estágio de build para testes locais que precisam de Go, CGO e headers nativos de codec;
 - nenhum armazenamento durável de imagem, fila, banco de dados ou object store.
 
 ## Consequências
@@ -34,6 +35,7 @@ Trade-offs:
 - O backend não pode mais usar um runtime distroless totalmente estático.
 - Builds nativos locais precisam das bibliotecas de desenvolvimento equivalentes da libheif instaladas.
 - Imagens de runtime precisam incluir os plugins de codec necessários da libheif.
+- Testes do backend via Docker devem rodar no serviço de teste baseado no estágio de build, para que fixtures reais HEIC/HEIF e geração sintética de HEIC usem a mesma cadeia de dependências nativas.
 - O binding Go da libheif escreve a saída codificada por uma API de arquivo temporário, então o compressor cria e remove imediatamente um arquivo temporário do sistema operacional para a saída HEIC/HEIF.
 
 A decisão deve ser revisitada se requisitos futuros exigirem runtime totalmente estático, suporte mais amplo a variantes HEIF, offload para serviço nativo/GPU ou processamento assíncrono de alta vazão.

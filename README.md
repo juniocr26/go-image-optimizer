@@ -33,7 +33,7 @@ Additional image optimization capabilities will be introduced incrementally as t
 | JPEG / JPG | JPEG | Lossy re-encode at conservative quality. EXIF orientation is applied to pixels before output. |
 | PNG | PNG | Lossless pixel output using high PNG compression. Transparency is preserved. |
 | WebP | WebP | Static and animated WebP are supported. Animated output preserves frame count and timing while re-encoding reconstructed frames. |
-| AVIF | AVIF | Static AVIF is supported; multi-frame AVIF is handled when the codec can decode it. |
+| AVIF | AVIF | Static AVIF is supported. The implementation uses the AVIF multi-image API, but current automated coverage uses static fixtures. |
 | HEIC / HEIF | HEIC / HEIF family | Uses native libheif/HEVC support in the backend container. Unsupported HEIF variants are rejected instead of being faked. |
 | GIF | GIF | Static and animated GIF are supported, including frame delays and loop settings. |
 | BMP | BMP | Decoded and re-encoded as BMP; size reduction is not guaranteed. |
@@ -61,10 +61,12 @@ The initial architecture intentionally keeps image processing within the Go appl
 ```mermaid
 flowchart LR
     U[User] --> F[Next.js Web Interface]
-    F -->|Image Upload| API[Go Application]
+    F -->|Image Upload| N[Next.js API Route]
+    N -->|Multipart Request| API[Go Application]
     API --> C[Image Compression]
     C --> API
-    API -->|Compressed Image| F
+    API -->|Compressed Image| N
+    N -->|Compressed Image| F
     F --> U
 ```
 
@@ -82,11 +84,26 @@ For architectural decisions and trade-offs, see [Architecture](docs/en/architect
 - [Documentação de Testes - Português](TESTS_README.pt-BR.md)
 - [README — Português](README.pt-BR.md)
 
+## Testing
+
+After the test image has been built, run backend tests with native codec support:
+
+```bash
+docker compose run --rm backend-test
+```
+
+The backend test suite includes deterministic synthetic tests and real image fixtures from `storage/testdata/images`.
+
 ## Roadmap
 
-The project will evolve incrementally. Planned capabilities include:
+The project will evolve incrementally.
+
+Implemented:
 
 - Image compression for JPEG/JPG, PNG, WebP, AVIF, HEIC/HEIF, GIF, BMP, and TIFF
+
+Future / considered:
+
 - Image resizing
 - Image format conversion
 - Thumbnail generation

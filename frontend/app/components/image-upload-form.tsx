@@ -13,7 +13,8 @@ import {
 import { createPortal } from "react-dom";
 
 const MAX_UPLOAD_BYTES = 50 * 1024 * 1024;
-const SUPPORTED_FORMAT_COPY = "JPG, PNG, WebP, AVIF, HEIC, GIF, BMP and TIFF";
+const SUPPORTED_FORMAT_COPY =
+  "JPG/JPEG, PNG, WebP, AVIF, HEIC/HEIF, GIF, BMP and TIFF";
 const SUPPORTED_IMAGE_TYPES = new Set([
   "image/jpeg",
   "image/png",

@@ -33,7 +33,7 @@ Outras funcionalidades de otimização serão adicionadas gradualmente conforme 
 | JPEG / JPG | JPEG | Re-encode lossy com qualidade conservadora. A orientação EXIF é aplicada aos pixels antes da saída. |
 | PNG | PNG | Saída lossless para pixels usando compressão PNG alta. Transparência é preservada. |
 | WebP | WebP | WebP estático e animado são suportados. A saída animada preserva quantidade de frames e tempos, reencodando frames reconstruídos. |
-| AVIF | AVIF | AVIF estático é suportado; AVIF com múltiplos frames é processado quando o codec consegue decodificar. |
+| AVIF | AVIF | AVIF estático é suportado. A implementação usa a API multi-imagem de AVIF, mas a cobertura automatizada atual usa fixtures estáticas. |
 | HEIC / HEIF | Família HEIC / HEIF | Usa libheif/HEVC nativo no container do backend. Variantes HEIF não suportadas são rejeitadas em vez de simuladas. |
 | GIF | GIF | GIF estático e animado são suportados, incluindo delays e configuração de loop. |
 | BMP | BMP | Decodificado e reencodado como BMP; redução de tamanho não é garantida. |
@@ -61,10 +61,12 @@ A arquitetura inicial mantém, propositalmente, o processamento da imagem dentro
 ```mermaid
 flowchart LR
     U[Usuário] --> F[Interface Web - Next.js]
-    F -->|Upload da imagem| API[Aplicação Go]
+    F -->|Upload da imagem| N[Rota API do Next.js]
+    N -->|Requisição multipart| API[Aplicação Go]
     API --> C[Compressão da imagem]
     C --> API
-    API -->|Imagem comprimida| F
+    API -->|Imagem comprimida| N
+    N -->|Imagem comprimida| F
     F --> U
 ```
 
@@ -82,11 +84,26 @@ Para conhecer as decisões arquiteturais e seus trade-offs, consulte [Arquitetur
 - [Documentação de Testes](TESTS_README.pt-BR.md)
 - [README — English](README.md)
 
+## Testes
+
+Depois que a imagem de teste for construída, execute os testes do backend com suporte aos codecs nativos:
+
+```bash
+docker compose run --rm backend-test
+```
+
+A suíte de backend inclui testes sintéticos determinísticos e fixtures reais de imagem em `storage/testdata/images`.
+
 ## Roadmap
 
-O projeto será desenvolvido de forma incremental. Entre as funcionalidades planejadas estão:
+O projeto será desenvolvido de forma incremental.
+
+Implementado:
 
 - Compressão de imagens JPEG/JPG, PNG, WebP, AVIF, HEIC/HEIF, GIF, BMP e TIFF
+
+Futuro / considerado:
+
 - Redimensionamento
 - Conversão de formatos
 - Geração de thumbnails

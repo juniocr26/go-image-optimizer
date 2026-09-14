@@ -50,6 +50,17 @@ sequenceDiagram
 
 O navegador mantém o preview da imagem selecionada e o resultado comprimido apenas em estado React e URLs Blob. Essas URLs são revogadas quando são substituídas, quando o fluxo é reiniciado ou quando o componente é desmontado. Ao recarregar a página, a sessão atual desaparece de forma intencional.
 
+Resumo do pipeline:
+
+1. O navegador envia um upload multipart para a rota API do Next.js.
+2. A rota do Next.js encaminha o form data para o backend Go.
+3. O handler Go valida a estrutura multipart e o limite da requisição, depois passa os bytes da imagem para o caso de uso.
+4. O compressor detecta o formato real pelos bytes antes de confiar em qualquer nome de arquivo ou MIME type.
+5. O caminho de codec selecionado valida as dimensões decodificadas e, para animações, os limites de pixels de canvas-frame.
+6. A imagem é decodificada, reencodada na mesma família de formato e retornada como bytes com metadados.
+7. O handler devolve os bytes comprimidos com headers de content type, content length e nome de download.
+8. O navegador mantém o resultado temporariamente em uma URL Blob até substituição, reset, desmontagem ou reload.
+
 ## 3. Fronteiras no backend
 
 O backend possui uma fronteira pequena de aplicação:
@@ -68,6 +79,15 @@ Responsabilidades atuais:
 
 O projeto ainda não cria um modelo de domínio porque a funcionalidade atual não possui entidades de domínio relevantes. A interface do compressor existe como uma fronteira útil entre o caso de uso e a implementação de infraestrutura.
 
+Essa estrutura é melhor descrita como uma arquitetura em camadas pequena e intencional, com separação entre transporte, aplicação e infraestrutura. Ela não é documentada como "Clean Architecture": o projeto aproveita algumas ideias úteis de fronteira, mas não precisa de entidades, repositories, factories ou frameworks de injeção de dependência na fase atual.
+
+Conclusão da revisão atual:
+
+- IMPLEMENTADO: a direção de dependências é simples e saudável para o escopo atual.
+- DECIDIDO: detalhes específicos de codec pertencem a `internal/infrastructure/imaging`.
+- DECIDIDO: parsing HTTP, mapeamento de status e headers de download pertencem a `internal/infrastructure/http`.
+- FUTURO: dividir o caso de uso ou adicionar tipos de domínio somente quando novos comportamentos criarem regras reais além de "comprimir esta imagem".
+
 ## 4. Detecção de formato
 
 O backend não confia na extensão do arquivo nem no MIME type informado pelo navegador. Ele inspeciona os bytes enviados e aceita apenas assinaturas e marcas de container conhecidas para os formatos suportados. Assinaturas de RAW de câmera, incluindo containers RAW baseados em TIFF como DNG e CR2, são rejeitadas em vez de serem direcionadas ao compressor TIFF.
@@ -84,7 +104,7 @@ Comportamento atual dos codecs:
 - PNG é decodificado e reencodado como PNG com o melhor nível de compressão da biblioteca padrão. Pixels e alpha são lossless.
 - WebP estático é decodificado e reencodado como WebP. Entrada WebP lossless continua lossless; alpha é preservado.
 - WebP animado é decodificado pelo container de animação, reconstruído como frames de canvas completo e reencodado como WebP animado. Quantidade de frames, duração, loop, cor de fundo e chunks de metadados suportados são preservados, mas retângulos internos de sub-frame e escolhas de disposal podem ser normalizados pelo encoder.
-- AVIF é decodificado e reencodado como AVIF. A rotação automática no decode fica habilitada. AVIF com múltiplos frames é codificado com delays e loop quando o codec consegue decodificar.
+- AVIF é decodificado e reencodado como AVIF. A rotação automática no decode fica habilitada. A implementação passa por `DecodeAll`/`EncodeAll`, mas a cobertura automatizada atual é para fixtures AVIF estáticas.
 - HEIC/HEIF usa libheif e suporte HEVC nativos. O backend aceita uma imagem primária top-level e rejeita variantes multi-imagem não suportadas com `422`.
 - GIF é decodificado com a biblioteca padrão do Go e reencodado como GIF. Frames, delays, disposal e loop de GIF animado são preservados por `gif.EncodeAll`.
 - BMP é decodificado e reencodado como BMP. A saída BMP pode não ficar menor.
@@ -108,6 +128,8 @@ Navegador
 
 Imagens enviadas e imagens comprimidas não são persistidas em armazenamento da aplicação. O backend não cria IDs de processamento, registros em banco de dados, registros no Redis, objetos em storage, URLs de resultado, filas, jobs em background, histórico de processamento ou limpeza por TTL.
 
+`storage/testdata/images` é um diretório versionado de fixtures de teste. Ele contém arquivos reais de entrada para testes de integração e não é usado pela aplicação em execução para uploads ou resultados. Os testes leem essas fixtures e mantêm as saídas comprimidas em memória ou em caminhos temporários do sistema operacional.
+
 Arquivos temporários de multipart, caso a biblioteca padrão crie algum durante o parsing da requisição, são removidos com `MultipartForm.RemoveAll()` antes do fim da requisição.
 
 A codificação HEIC/HEIF usa internamente a API de saída para arquivo do binding Go da libheif. O compressor escreve em um arquivo temporário do sistema operacional, lê o resultado de volta para memória e remove esse arquivo temporário antes de devolver a resposta. Isso não cria armazenamento durável da aplicação.
@@ -127,6 +149,8 @@ Proteções atuais de recursos:
 
 ## 8. Ciclo de vida no frontend
 
+O frontend é uma aplicação Next.js. A página compõe a experiência de upload, `ImageUploadForm` mantém o estado client-side de seleção, envio e resultado, e a rota Next.js `app/api/images/compress/route.ts` encaminha requisições multipart para o backend Go preservando headers relevantes da resposta.
+
 O frontend mantém o fluxo em estado React:
 
 - drop zone inicial;
@@ -141,13 +165,25 @@ O frontend mantém o fluxo em estado React:
 
 A interface não persiste a sessão em `localStorage`, IndexedDB, armazenamento do backend ou qualquer outro armazenamento durável. Após recarregar a página, a imagem selecionada e o resultado desaparecem por decisão do MVP.
 
-## 9. Decisão sobre codecs nativos
+Conclusão da revisão atual do frontend:
+
+- IMPLEMENTADO: a UI no navegador, a rota de encaminhamento da API e a API backend estão separadas de forma clara o suficiente para a funcionalidade atual.
+- VÁLIDO, MAS ACOMPANHAR: `ImageUploadForm` é grande porque contém validação de upload, fallback de preview, comportamento de modal e helpers de formatação. Isso é aceitável para a fase um, mas extrair componentes menores ou um helper de requisição pode valer a pena se novas ações de imagem forem adicionadas.
+- DECIDIDO: não adicionar um framework de testes frontend nesta fase focada no backend.
+
+## 9. Fronteira entre containers frontend e backend
+
+Os containers separados de frontend e backend são intencionais. O frontend precisa de build e runtime Node/Next.js; o backend precisa de build Go, CGO e pacotes nativos da libheif em runtime para HEIC/HEIF. Juntar esses containers deixaria a imagem de runtime maior sem simplificar a arquitetura atual.
+
+O serviço Compose `backend-test` é uma conveniência local de teste/desenvolvimento, não um serviço de produção. Ele usa o estágio de build do backend para que o toolchain Go e headers nativos estejam disponíveis nos testes, enquanto o serviço de produção `backend` permanece mínimo.
+
+## 10. Decisão sobre codecs nativos
 
 O suporte a HEIC/HEIF exige libheif nativa e plugins de codec HEVC no Docker. Por isso, a imagem do backend usa build Alpine com CGO habilitado e runtime Alpine com pacotes libheif, em vez de uma imagem distroless totalmente estática.
 
 Consulte [ADR 001: Codecs nativos de imagem](adr-001-codecs-nativos.md) e [Docker](docker.md).
 
-## 10. Limitações atuais
+## 11. Limitações atuais
 
 - A compressão é síncrona.
 - Preservação de metadados é best-effort e específica por formato, não uma garantia universal.
@@ -156,9 +192,9 @@ Consulte [ADR 001: Codecs nativos de imagem](adr-001-codecs-nativos.md) e [Docke
 - O suporte de preview no navegador varia por formato.
 - Não há histórico, busca por ID, worker em background, fila, banco de dados, object storage ou limpeza por TTL.
 
-## 11. Possível evolução
+## 12. Possível evolução
 
-Se requisitos futuros exigirem processamento assíncrono, arquivos maiores, formatos mais pesados, maior vazão, compartilhamento de resultados ou histórico, a arquitetura pode evoluir para algo como:
+FUTURO / CONSIDERADO: se requisitos futuros exigirem processamento assíncrono, arquivos maiores, formatos mais pesados, maior vazão medida, compartilhamento de resultados ou histórico, a arquitetura pode evoluir para algo como:
 
 ```text
 Upload
@@ -169,4 +205,4 @@ Upload
     -> Limpeza por TTL
 ```
 
-Essa direção deve ser introduzida somente com requisitos claros e trade-offs documentados sobre armazenamento, retenção, limpeza, observabilidade, segurança e custo operacional.
+Essa direção não está implementada hoje. Ela deve ser introduzida somente com requisitos claros e trade-offs documentados sobre armazenamento, retenção, limpeza, observabilidade, segurança e custo operacional.
