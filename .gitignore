@@ -40,9 +40,13 @@ frontend/npm-debug.log*
 backend/bin/
 backend/tmp/
 
-# Reserved local generated image storage; the current app does not persist uploads/results.
+# Local generated image storage; the current app does not persist uploads/results.
 storage/*
 !storage/.gitkeep
+
+# Versioned fixtures used by automated tests.
+!storage/testdata/
+!storage/testdata/**
 
 # Editor/IDE
 .idea/
