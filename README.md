@@ -28,16 +28,16 @@ Additional image optimization capabilities will be introduced incrementally as t
 
 ## Supported Formats
 
-| Format | Output behavior | Notes |
-| --- | --- | --- |
-| JPEG / JPG | JPEG | Lossy re-encode at conservative quality. EXIF orientation is applied to pixels before output. |
-| PNG | PNG | Lossless pixel output using high PNG compression. Transparency is preserved. |
-| WebP | WebP | Static and animated WebP are supported. Animated output preserves frame count and timing while re-encoding reconstructed frames. |
-| AVIF | AVIF | Static AVIF is supported. The implementation uses the AVIF multi-image API, but current automated coverage uses static fixtures. |
-| HEIC / HEIF | HEIC / HEIF family | Uses native libheif/HEVC support in the backend container. Unsupported HEIF variants are rejected instead of being faked. |
-| GIF | GIF | Static and animated GIF are supported, including frame delays and loop settings. |
-| BMP | BMP | Decoded and re-encoded as BMP; size reduction is not guaranteed. |
-| TIFF | TIFF | Re-encoded as TIFF with Deflate compression. |
+| Format      | Output behavior    | Notes                                                                                                                            |
+| ----------- | ------------------ | -------------------------------------------------------------------------------------------------------------------------------- |
+| JPEG / JPG  | JPEG               | Lossy re-encode at conservative quality. EXIF orientation is applied to pixels before output.                                    |
+| PNG         | PNG                | Lossless pixel output using high PNG compression. Transparency is preserved.                                                     |
+| WebP        | WebP               | Static and animated WebP are supported. Animated output preserves frame count and timing while re-encoding reconstructed frames. |
+| AVIF        | AVIF               | Static AVIF is supported. The implementation uses the AVIF multi-image API, but current automated coverage uses static fixtures. |
+| HEIC / HEIF | HEIC / HEIF family | Uses native libheif/HEVC support in the backend container. Unsupported HEIF variants are rejected instead of being faked.        |
+| GIF         | GIF                | Static and animated GIF are supported, including frame delays and loop settings.                                                 |
+| BMP         | BMP                | Decoded and re-encoded as BMP; size reduction is not guaranteed.                                                                 |
+| TIFF        | TIFF               | Re-encoded as TIFF with Deflate compression.                                                                                     |
 
 WebM, SVG, RAW camera formats, videos, and archives are intentionally not supported.
 
@@ -113,4 +113,4 @@ The roadmap represents the intended direction of the project and may change as i
 
 ## License
 
-No license has been defined for this project yet.
+This project is licensed under the MIT License. See the `LICENSE` file for details.
