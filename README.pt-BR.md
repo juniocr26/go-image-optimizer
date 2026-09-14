@@ -79,7 +79,7 @@ Para conhecer as decisões arquiteturais e seus trade-offs, consulte [Arquitetur
 - [Docker](docs/pt-BR/docker.md)
 - [ADR 001: Codecs nativos de imagem](docs/pt-BR/adr-001-codecs-nativos.md)
 - [Test Documentation - English](TESTS_README.md)
-- [Documentação de Testes](TESTS_README-ptBR.md)
+- [Documentação de Testes](TESTS_README.pt-BR.md)
 - [README — English](README.md)
 
 ## Roadmap

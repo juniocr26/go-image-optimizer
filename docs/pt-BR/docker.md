@@ -6,6 +6,7 @@ A configuração Docker executa o mesmo fluxo síncrono e sem armazenamento pers
 
 - `backend`: API Go na porta `8080`.
 - `frontend`: interface Next.js na porta `3000`.
+- `backend-test`: executor de testes do backend, protegido por profile, usando o estágio de build Go.
 
 O `docker-compose.yml` não monta volume de armazenamento da aplicação para imagens enviadas ou otimizadas. As imagens são recebidas, processadas, devolvidas e descartadas.
 
@@ -29,11 +30,14 @@ Pacotes no runtime:
 
 O runtime distroless totalmente estático usado antes não é adequado para este conjunto de formatos porque a libheif carrega bibliotecas/plugins nativos em tempo de execução.
 
+O serviço de produção `backend` usa o estágio final de runtime e não inclui o toolchain Go nem código-fonte montado. Os testes do backend rodam pelo serviço separado `backend-test`, que usa o estágio de build, mantém CGO e dependências nativas de codec disponíveis, e monta `./backend` em `/src`.
+
 ## Comandos de validação
 
 ```bash
 docker compose config
-docker compose build
+docker compose build backend
+docker compose build backend-test
 docker compose up
 ```
 
@@ -42,9 +46,16 @@ Depois, abra o frontend em `http://localhost:3000` e envie amostras representati
 Para executar apenas os testes do backend via Docker:
 
 ```bash
-docker run --rm -v "$PWD/backend:/src" -w /src golang:1.27.1-alpine sh -lc \
-  'apk add --no-cache build-base pkgconf libheif-dev libheif-libde265 libheif-x265 >/dev/null && /usr/local/go/bin/go test ./...'
+docker compose run --build --rm backend-test
 ```
+
+O serviço de teste fica atrás do profile `test`, então ele não é iniciado pelo `docker compose up` normal. Para passar flags customizadas do Go test no mesmo ambiente com codecs nativos:
+
+```bash
+docker compose run --build --rm backend-test go test -v ./internal/infrastructure/imaging -run TestCompressorCompressesSupportedStaticFormats
+```
+
+`go test -race ./...` está bloqueado no momento por uma falha de `checkptr` do Go dentro de `github.com/strukturag/libheif` durante a geração das fixtures HEIC/HEIF. A suíte normal sem `-race` é o fluxo de testes do backend suportado.
 
 ## Diagnóstico
 

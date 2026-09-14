@@ -15,6 +15,7 @@ Os testes automatizados do backend cobrem:
 - comportamento do caso de uso de compressão;
 - tratamento de contexto cancelado;
 - compressão válida de JPEG/JPG, PNG, WebP, AVIF, HEIC/HEIF, GIF, BMP e TIFF;
+- detecção dos bytes de saída comprimidos para todos os formatos estáticos suportados;
 - imagens de saída podem ser decodificadas;
 - dimensões são preservadas;
 - formato da resposta é preservado;
@@ -34,6 +35,31 @@ Os testes automatizados do backend cobrem:
 - headers de resposta em sucesso;
 - nomes de download gerados;
 - spoofing de extensão, em que o tipo de resposta segue os bytes detectados e não o nome enviado.
+
+## Matriz de cobertura de formatos no backend
+
+| Formato | Compressão invocada | Saída decodificada | Formato preservado | Dimensões verificadas | Propriedades específicas verificadas |
+| --- | --- | --- | --- | --- | --- |
+| JPEG / JPG | Compressor real e rota HTTP com bytes JPEG determinísticos | `jpeg.Decode` | `FormatJPEG`, `image/jpeg`, bytes de saída detectados, nomes `.jpg` / `.jpeg` | Sim | Normalização de orientação EXIF e fixture determinística de redução de JPEG em alta qualidade |
+| PNG | Compressor real e rota HTTP com bytes PNG determinísticos | `png.Decode` | `FormatPNG`, `image/png`, bytes de saída detectados | Sim | Preservação lossless de pixels e alpha |
+| WebP | Compressor real e rota HTTP com bytes WebP estáticos determinísticos; caminho animado também exercitado | `webp.Decode`; `animation.Decode` para saída animada | `FormatWebP`, `image/webp`, bytes de saída detectados | Sim | Transparência lossless, quantidade de frames animados e duração dos frames |
+| AVIF | Compressor real e rota HTTP com bytes AVIF determinísticos | `avif.Decode` | `FormatAVIF`, `image/avif`, bytes de saída detectados | Sim | Caminho real de encode/decode AVIF; nenhum comportamento de variante não suportada é inventado |
+| HEIC / HEIF | Compressor real e rota HTTP com bytes determinísticos via libheif/HEVC | Decode da imagem primária via libheif | `FormatHEIF`, detecção da família HEIC/HEIF, nomes `.heic` / `.heif` | Sim | Caminho nativo de encode/decode via libheif/HEVC é exercitado |
+| GIF | Compressor real e rota HTTP com bytes GIF estáticos determinísticos; caminho animado também exercitado | `gif.Decode`; `gif.DecodeAll` para saída animada | `FormatGIF`, `image/gif`, bytes de saída detectados | Sim | Quantidade de frames animados, delays, loop e valores de disposal |
+| BMP | Compressor real e rota HTTP com bytes BMP determinísticos | `bmp.Decode` | `FormatBMP`, `image/bmp`, bytes de saída detectados | Sim | Re-encode BMP bem-sucedido sem exigir redução de tamanho |
+| TIFF | Compressor real e rota HTTP com bytes TIFF determinísticos | `tiff.Decode` | `FormatTIFF`, `image/tiff`, bytes de saída detectados, nomes `.tif` / `.tiff` | Sim | Re-encode TIFF com compressão Deflate; spoofing RAW/DNG continua rejeitado |
+
+## Estratégia das imagens de teste
+
+A suíte normal de testes não baixa imagens em tempo de execução. As imagens de teste são determinísticas e geradas por helpers nos testes Go:
+
+- gradientes e padrões detalhados de pixels para cobertura de codecs estáticos;
+- padrões com alpha/transparência para PNG e WebP lossless;
+- pequenas amostras animadas de GIF e WebP para comportamento de frames e tempos;
+- um payload PNG grande e determinístico para comportamento do limite de upload;
+- bytes HEIC/HEIF de origem gerados via libheif e HEVC em um diretório temporário do teste.
+
+Atualmente não há fixtures binárias de imagem commitadas. Os testes de HEIC/HEIF exigem bibliotecas de desenvolvimento nativas da libheif e plugins HEVC de decode/encode porque tanto a fixture do teste quanto a saída comprimida usam o caminho real do codec nativo.
 
 ## Validação do frontend
 
@@ -57,21 +83,30 @@ A validação manual da interface deve cobrir:
 
 ## Como executar
 
-Testes do backend com Go instalado localmente:
+Testes recomendados do backend com Docker Compose:
+
+```bash
+docker compose run --build --rm backend-test
+```
+
+Esse comando usa o serviço Compose `backend-test`, que aponta para o estágio de build Go do `backend/Dockerfile`. Essa imagem contém o toolchain Go, ferramentas de build com CGO, `pkgconf`, headers de desenvolvimento da libheif, `libheif-libde265` e `libheif-x265`. O serviço monta `./backend` em `/src`, então alterações no código-fonte são testadas sem rebuildar a imagem de runtime de produção.
+
+O serviço `backend-test` fica atrás do profile `test` e não é iniciado pelo `docker compose up` normal. O container da API backend não precisa estar rodando para o comando de teste acima. Se o projeto já estiver rodando, execute o comando de teste em outro terminal.
+
+Para passar flags customizadas do Go test no mesmo ambiente:
+
+```bash
+docker compose run --build --rm backend-test go test -v ./internal/infrastructure/imaging -run TestCompressorCompressesSupportedStaticFormats
+```
+
+Testes do backend com Go instalado localmente continuam suportados quando as dependências nativas correspondentes estão instaladas localmente:
 
 ```bash
 cd backend
-go test ./...
+CGO_ENABLED=1 go test ./...
 ```
 
-Testes locais de HEIC/HEIF exigem bibliotecas de desenvolvimento nativas da libheif e plugins de codec HEVC. O Docker é o caminho recomendado quando essas dependências não estão instaladas localmente.
-
-Testes do backend com Docker:
-
-```bash
-docker run --rm -v "$PWD/backend:/src" -w /src golang:1.27.1-alpine sh -lc \
-  'apk add --no-cache build-base pkgconf libheif-dev libheif-libde265 libheif-x265 >/dev/null && /usr/local/go/bin/go test ./...'
-```
+Testes locais de HEIC/HEIF exigem bibliotecas de desenvolvimento nativas da libheif e plugins de codec HEVC. O Docker Compose é o caminho recomendado quando essas dependências não estão instaladas localmente.
 
 Build de produção do frontend:
 
@@ -94,5 +129,6 @@ Depois, abra o frontend, envie amostras representativas de JPEG/JPG, PNG, WebP, 
 - Não há asserções visuais de qualidade para a saída JPEG.
 - O fluxo do frontend é validado manualmente.
 - A validação com Docker Compose é um smoke test, não um teste de carga ou escalabilidade.
+- `go test -race ./...` está bloqueado no momento por uma falha de `checkptr` dentro de `github.com/strukturag/libheif` durante a geração das fixtures HEIC/HEIF; a suíte normal sem `-race` passa.
 - WebM, SVG, RAW, vídeo e arquivos compactados são intencionalmente não suportados e entram na cobertura como comportamento de entrada não suportada, não como testes de codec.
 - Nenhum percentual de cobertura é declarado.

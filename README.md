@@ -79,7 +79,7 @@ For architectural decisions and trade-offs, see [Architecture](docs/en/architect
 - [ADR 001: Native Image Codecs](docs/en/adr-001-native-image-codecs.md)
 - [Arquitetura - Português](docs/pt-BR/architecture.md)
 - [Test Documentation](TESTS_README.md)
-- [Documentação de Testes - Português](TESTS_README-ptBR.md)
+- [Documentação de Testes - Português](TESTS_README.pt-BR.md)
 - [README — Português](README.pt-BR.md)
 
 ## Roadmap

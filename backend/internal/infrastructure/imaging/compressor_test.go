@@ -113,6 +113,10 @@ func TestCompressorCompressesSupportedStaticFormats(t *testing.T) {
 			if result.Width != 40 || result.Height != 28 {
 				t.Fatalf("expected result dimensions 40x28, got %dx%d", result.Width, result.Height)
 			}
+			if len(result.Data) == 0 {
+				t.Fatal("expected compressed output bytes")
+			}
+			assertDetectedFormat(t, result.Data, tt.format, tt.contentType)
 
 			decoded := tt.decode(t, result.Data)
 			assertDimensions(t, decoded, 40, 28)
@@ -176,6 +180,10 @@ func TestCompressorPreservesGIFAnimationFramesAndTiming(t *testing.T) {
 	if result.Format != imagecompression.FormatGIF || result.ContentType != "image/gif" {
 		t.Fatalf("expected GIF result, got %q %q", result.Format, result.ContentType)
 	}
+	if len(result.Data) == 0 {
+		t.Fatal("expected compressed GIF bytes")
+	}
+	assertDetectedFormat(t, result.Data, imagecompression.FormatGIF, "image/gif")
 	if !result.Animated || result.FrameCount != 2 {
 		t.Fatalf("expected two-frame animation, animated=%v frameCount=%d", result.Animated, result.FrameCount)
 	}
@@ -209,6 +217,10 @@ func TestCompressorPreservesAnimatedWebPFramesAndTiming(t *testing.T) {
 	if result.Format != imagecompression.FormatWebP || result.ContentType != "image/webp" {
 		t.Fatalf("expected WebP result, got %q %q", result.Format, result.ContentType)
 	}
+	if len(result.Data) == 0 {
+		t.Fatal("expected compressed WebP bytes")
+	}
+	assertDetectedFormat(t, result.Data, imagecompression.FormatWebP, "image/webp")
 	if !result.Animated || result.FrameCount != 2 {
 		t.Fatalf("expected two-frame animation, animated=%v frameCount=%d", result.Animated, result.FrameCount)
 	}
@@ -817,6 +829,21 @@ func assertDimensions(t *testing.T, img image.Image, width, height int) {
 	bounds := img.Bounds()
 	if bounds.Dx() != width || bounds.Dy() != height {
 		t.Fatalf("expected dimensions %dx%d, got %dx%d", width, height, bounds.Dx(), bounds.Dy())
+	}
+}
+
+func assertDetectedFormat(t *testing.T, data []byte, format imagecompression.Format, contentType string) {
+	t.Helper()
+
+	detected, err := detectFormat(data)
+	if err != nil {
+		t.Fatalf("compressed output format could not be detected: %v", err)
+	}
+	if detected.format != format {
+		t.Fatalf("expected detected format %q, got %q", format, detected.format)
+	}
+	if detected.contentType != contentType {
+		t.Fatalf("expected detected content type %q, got %q", contentType, detected.contentType)
 	}
 }
 
