@@ -3,8 +3,8 @@
 import {
   type ChangeEvent,
   type DragEvent,
-  type FormEvent,
   type RefObject,
+  type SyntheticEvent,
   useEffect,
   useId,
   useRef,
@@ -194,7 +194,7 @@ export function ImageUploadForm() {
     }
   }
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: SyntheticEvent<HTMLFormElement>) {
     event.preventDefault();
 
     if (!selectedFile) {
