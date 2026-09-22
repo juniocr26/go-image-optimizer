@@ -149,7 +149,7 @@ Proteções atuais de recursos:
 
 ## 8. Ciclo de vida no frontend
 
-O frontend é uma aplicação Next.js. A página compõe a experiência de upload, `ImageUploadForm` mantém o estado client-side de seleção, envio e resultado, e a rota Next.js `app/api/images/compress/route.ts` encaminha requisições multipart para o backend Go preservando headers relevantes da resposta.
+O frontend é uma aplicação Next.js. `app/page.tsx` permanece como camada de composição da Home e delega seções específicas da Home para `app/components/home/*`. `ImageUploadForm` mantém o estado client-side de seleção, envio e resultado em `app/components/image-upload/`, enquanto componentes filhos locais da feature cuidam da drop zone, controles de operação, modal de resultado, preview no navegador, métricas de resultado, ícones, tipos e lógica auxiliar de imagem/arquivo. A rota Next.js `app/api/images/compress/route.ts` encaminha requisições multipart para o backend Go preservando headers relevantes da resposta.
 
 O frontend mantém o fluxo em estado React:
 
@@ -167,8 +167,8 @@ A interface não persiste a sessão em `localStorage`, IndexedDB, armazenamento 
 
 Conclusão da revisão atual do frontend:
 
-- IMPLEMENTADO: a UI no navegador, a rota de encaminhamento da API e a API backend estão separadas de forma clara o suficiente para a funcionalidade atual.
-- VÁLIDO, MAS ACOMPANHAR: `ImageUploadForm` é grande porque contém validação de upload, fallback de preview, comportamento de modal e helpers de formatação. Isso é aceitável para a fase um, mas extrair componentes menores ou um helper de requisição pode valer a pena se novas ações de imagem forem adicionadas.
+- IMPLEMENTADO: a UI no navegador, as seções da Home, os componentes da feature de upload de imagem, a rota de encaminhamento da API e a API backend têm fronteiras de responsabilidade claras para a funcionalidade atual.
+- IMPLEMENTADO: `ImageUploadForm` continua sendo dono do estado do fluxo, enquanto validação, constantes de formato, nomes de arquivo, formatação de bytes, fallback de preview, métricas de resultado e comportamento acessível do modal vivem em módulos locais e focados da feature.
 - DECIDIDO: não adicionar um framework de testes frontend nesta fase focada no backend.
 
 ## 9. Fronteira entre containers frontend e backend

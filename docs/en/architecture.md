@@ -149,7 +149,7 @@ Current resource protections:
 
 ## 8. Frontend Lifecycle
 
-The frontend is a Next.js application. The page composes the upload experience, `ImageUploadForm` owns client-side selection/submission/result state, and the Next.js route `app/api/images/compress/route.ts` forwards multipart requests to the Go backend while preserving relevant response headers.
+The frontend is a Next.js application. `app/page.tsx` stays as the Home page composition layer and delegates Home-specific sections to `app/components/home/*`. `ImageUploadForm` owns client-side selection/submission/result state in `app/components/image-upload/`, while feature-local children handle the drop zone, operation controls, result modal, browser preview, result metrics, icons, types, and image/file helper logic. The Next.js route `app/api/images/compress/route.ts` forwards multipart requests to the Go backend while preserving relevant response headers.
 
 The frontend keeps the workflow in React state:
 
@@ -167,8 +167,8 @@ The UI does not persist sessions in `localStorage`, IndexedDB, backend storage, 
 
 Current frontend review conclusion:
 
-- IMPLEMENTED: the browser UI, API forwarding route, and backend API are separated clearly enough for the current feature.
-- VALID BUT WATCH: `ImageUploadForm` is large because it contains upload validation, preview fallback, modal behavior, and formatting helpers. This is acceptable for phase one, but extraction into smaller components or a request helper would become useful if more image actions are added.
+- IMPLEMENTED: the browser UI, Home page sections, image-upload feature components, API forwarding route, and backend API have clear ownership boundaries for the current feature.
+- IMPLEMENTED: `ImageUploadForm` remains the workflow state owner, while validation, format constants, filename handling, byte formatting, preview fallback, result metrics, and modal accessibility behavior live in focused feature-local modules.
 - DECIDED: do not add a frontend test framework during this backend-focused phase.
 
 ## 9. Frontend and Backend Container Boundary
