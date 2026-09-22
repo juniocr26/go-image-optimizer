@@ -94,6 +94,32 @@ docker compose run --rm backend-test
 
 The backend test suite includes deterministic synthetic tests and real image fixtures from `storage/testdata/images`.
 
+## Docker Workflows
+
+Docker and Docker Compose are the only host requirements; Node.js and npm run inside the frontend container.
+
+Start the frontend development server and backend with live-mounted frontend source:
+
+```bash
+docker compose --profile dev up frontend-dev
+```
+
+Open `http://localhost:3000`. Changes to frontend TypeScript, TSX, CSS, and related source files are detected by Next.js development mode without rebuilding the image. See the Docker guide for the dependency-volume refresh command required when `package.json` or `package-lock.json` changes.
+
+Validate the production frontend build entirely through Docker:
+
+```bash
+docker compose build frontend
+```
+
+The normal production-style application remains separate:
+
+```bash
+docker compose up --build backend frontend
+```
+
+See [Docker](docs/en/docker.md) for details.
+
 ## Roadmap
 
 The project will evolve incrementally.

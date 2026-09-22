@@ -36,3 +36,27 @@ services:
       - "${FRONTEND_PORT:-3000}:3000"
     depends_on:
       - backend
+
+  frontend-dev:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: development
+    profiles:
+      - dev
+    environment:
+      BACKEND_URL: ${BACKEND_URL:-http://backend:8080}
+      HOSTNAME: 0.0.0.0
+      PORT: 3000
+    ports:
+      - "${FRONTEND_PORT:-3000}:3000"
+    depends_on:
+      - backend
+    volumes:
+      - ./frontend:/app
+      - frontend-node-modules:/app/node_modules
+      - frontend-next:/app/.next
+
+volumes:
+  frontend-node-modules:
+  frontend-next:

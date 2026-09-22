@@ -6,6 +6,7 @@ A configuração Docker executa o mesmo fluxo síncrono e sem armazenamento pers
 
 - `backend`: API Go na porta `8080`.
 - `frontend`: interface Next.js na porta `3000`.
+- `frontend-dev`: servidor de desenvolvimento Next.js protegido por profile, com o código-fonte do frontend montado e porta `3000`.
 - `backend-test`: executor de testes do backend, protegido por profile, usando o estágio de build Go e executando `go test -v ./...`.
 
 O `docker-compose.yml` não monta volume de armazenamento da aplicação para imagens enviadas ou otimizadas. As imagens são recebidas, processadas, devolvidas e descartadas.
@@ -33,6 +34,45 @@ O runtime distroless totalmente estático usado antes não é adequado para este
 O serviço de produção `backend` usa o estágio final de runtime e não inclui o toolchain Go nem código-fonte montado. Os testes do backend rodam pelo serviço separado `backend-test`, que usa o estágio de build, mantém CGO e dependências nativas de codec disponíveis, monta `./backend` em `/src` e monta `./storage/testdata/images` como somente leitura em `/testdata/images`.
 
 O mount `storage/testdata/images` contém fixtures reais de imagem versionadas usadas pelos testes. Ele não é armazenamento de uploads da aplicação, e saídas comprimidas dos testes não são gravadas ali.
+
+## Desenvolvimento do frontend com Docker
+
+Apenas Docker e Docker Compose são necessários no host. Node.js, npm e as dependências do frontend permanecem dentro do Docker.
+
+Inicie o backend e o servidor persistente de desenvolvimento do Next.js com:
+
+```bash
+docker compose --profile dev up frontend-dev
+```
+
+Depois, acesse `http://localhost:3000`. O serviço monta `./frontend` em `/app`, então alterações em TSX, TypeScript, CSS e outros arquivos-fonte do frontend são detectadas pelo modo de desenvolvimento do Next.js e aparecem ao atualizar a página sem reconstruir a imagem. Volumes nomeados em `/app/node_modules` e `/app/.next` mantêm as dependências e a saída de desenvolvimento gerenciadas pelo container, sem expô-las ou substituí-las pelo bind mount do host.
+
+Interrompa o ambiente de desenvolvimento com `Ctrl+C`, ou use `docker compose --profile dev down` quando ele tiver sido iniciado em segundo plano. Após mudar `frontend/package.json` ou `frontend/package-lock.json`, recrie o volume de dependências e a imagem de desenvolvimento para que `npm ci` o preencha usando o novo lockfile:
+
+```bash
+docker compose --profile dev down --volumes
+docker compose --profile dev up --build frontend-dev
+```
+
+A rota de API do frontend continua acessando o backend do Compose por `BACKEND_URL=http://backend:8080` por padrão. `FRONTEND_PORT` e `BACKEND_PORT` ainda podem sobrescrever as portas no host.
+
+## Validação do build de produção do frontend
+
+Execute o build de produção do frontend no Docker, sem Node.js ou npm no host:
+
+```bash
+docker compose build frontend
+```
+
+O build da imagem `frontend` instala as dependências fixadas pelo lockfile com `npm ci`, executa `npm run build` no estágio de build do Dockerfile e produz a imagem de runtime de produção. Esse comando é separado do servidor persistente `frontend-dev` e serve para validar o build de produção.
+
+## Execução em modo de produção
+
+Os serviços de produção existentes continuam sem mounts de código-fonte e usam suas imagens finais de runtime:
+
+```bash
+docker compose up --build backend frontend
+```
 
 ## Fluxo de build e testes
 
@@ -62,7 +102,8 @@ Use `docker compose run` para `backend-test` porque o container de teste é temp
 docker compose config
 docker compose build backend
 docker compose build backend-test
-docker compose up
+docker compose build frontend
+docker compose up backend frontend
 ```
 
 Depois, abra o frontend em `http://localhost:3000` e envie amostras representativas de JPEG/JPG, PNG, WebP, AVIF, HEIC/HEIF, GIF, BMP e TIFF.

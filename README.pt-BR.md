@@ -94,6 +94,32 @@ docker compose run --rm backend-test
 
 A suíte de backend inclui testes sintéticos determinísticos e fixtures reais de imagem em `storage/testdata/images`.
 
+## Fluxos com Docker
+
+Docker e Docker Compose são os únicos requisitos no host; Node.js e npm rodam dentro do container do frontend.
+
+Inicie o servidor de desenvolvimento do frontend e o backend com o código-fonte do frontend montado:
+
+```bash
+docker compose --profile dev up frontend-dev
+```
+
+Acesse `http://localhost:3000`. Alterações em TypeScript, TSX, CSS e arquivos relacionados do frontend são detectadas pelo modo de desenvolvimento do Next.js sem reconstruir a imagem. Consulte o guia Docker para o comando de atualização do volume de dependências necessário quando `package.json` ou `package-lock.json` mudar.
+
+Valide o build de produção do frontend inteiramente via Docker:
+
+```bash
+docker compose build frontend
+```
+
+A execução normal da aplicação em modo de produção permanece separada:
+
+```bash
+docker compose up --build backend frontend
+```
+
+Consulte [Docker](docs/pt-BR/docker.md) para mais detalhes.
+
 ## Roadmap
 
 O projeto será desenvolvido de forma incremental.

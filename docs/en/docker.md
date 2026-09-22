@@ -6,6 +6,7 @@ The Docker setup runs the same synchronous, no-persistent-storage workflow as th
 
 - `backend`: Go API on port `8080`.
 - `frontend`: Next.js UI on port `3000`.
+- `frontend-dev`: profile-gated Next.js development server with live-mounted frontend source on port `3000`.
 - `backend-test`: profile-gated backend test runner that targets the Go build stage and runs `go test -v ./...`.
 
 `docker-compose.yml` does not mount an application storage volume for uploaded or optimized image results. Images are received, processed, returned, and discarded.
@@ -33,6 +34,45 @@ The previous fully static distroless runtime is not suitable for this feature se
 The production `backend` service uses the final runtime stage and does not include the Go toolchain or mounted source code. Backend tests run through the separate `backend-test` service, which targets the build stage, keeps CGO and native codec dependencies available, mounts `./backend` at `/src`, and mounts `./storage/testdata/images` read-only at `/testdata/images`.
 
 The `storage/testdata/images` mount contains versioned real image fixtures used by tests. It is not application upload storage, and compressed test outputs are not written there.
+
+## Frontend Development with Docker
+
+Only Docker and Docker Compose are required on the host. Node.js, npm, and frontend dependencies stay inside Docker.
+
+Start the backend and persistent Next.js development server with:
+
+```bash
+docker compose --profile dev up frontend-dev
+```
+
+Then open `http://localhost:3000`. The service bind mounts `./frontend` at `/app`, so edits to TSX, TypeScript, CSS, and other frontend source files are detected by Next.js development mode and appear on refresh without rebuilding the image. Named volumes at `/app/node_modules` and `/app/.next` keep dependencies and development build output container-managed instead of exposing or replacing them through the host bind mount.
+
+Stop the development environment with `Ctrl+C`, or use `docker compose --profile dev down` when it was started detached. After changing `frontend/package.json` or `frontend/package-lock.json`, recreate the dependency volume and development image so `npm ci` repopulates it from the new lockfile:
+
+```bash
+docker compose --profile dev down --volumes
+docker compose --profile dev up --build frontend-dev
+```
+
+The frontend API route continues to reach the Compose backend through `BACKEND_URL=http://backend:8080` by default. `FRONTEND_PORT` and `BACKEND_PORT` can still override the host ports.
+
+## Frontend Production Build Validation
+
+Run the production frontend build in Docker, without host Node.js or npm:
+
+```bash
+docker compose build frontend
+```
+
+The `frontend` image build installs the lockfile-pinned dependencies with `npm ci`, runs `npm run build` in the Dockerfile build stage, and produces the production runtime image. This command is separate from the persistent `frontend-dev` server and is intended for production-build validation.
+
+## Production-style Execution
+
+The existing production services remain source-mount-free and use their final runtime images:
+
+```bash
+docker compose up --build backend frontend
+```
 
 ## Build and Test Workflow
 
@@ -62,7 +102,8 @@ Use `docker compose run` for `backend-test` because the test container is short-
 docker compose config
 docker compose build backend
 docker compose build backend-test
-docker compose up
+docker compose build frontend
+docker compose up backend frontend
 ```
 
 Then open the frontend at `http://localhost:3000` and upload representative JPEG/JPG, PNG, WebP, AVIF, HEIC/HEIF, GIF, BMP, and TIFF samples.
