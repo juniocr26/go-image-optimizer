@@ -1,4 +1,4 @@
-package imaging
+package compress
 
 import (
 	"bytes"
@@ -8,6 +8,7 @@ import (
 	"github.com/deepteams/webp/animation"
 
 	"github.com/juniorosa/go-image-optimizer/backend/internal/application/imagecompression"
+	"github.com/juniorosa/go-image-optimizer/backend/internal/infrastructure/imaging"
 )
 
 func (c Compressor) compressWebP(input []byte) (imagecompression.Result, error) {
@@ -17,7 +18,7 @@ func (c Compressor) compressWebP(input []byte) (imagecompression.Result, error) 
 	}
 
 	frameCount := max(1, features.FrameCount)
-	if err := validateImageSize(features.Width, features.Height, c.maxDecodedPixels()); err != nil {
+	if err := imaging.ValidateImageSize(features.Width, features.Height, c.maxDecodedPixels()); err != nil {
 		return imagecompression.Result{}, err
 	}
 
@@ -45,7 +46,7 @@ func (c Compressor) compressWebP(input []byte) (imagecompression.Result, error) 
 }
 
 func (c Compressor) compressAnimatedWebP(input []byte, width, height, frameCount, loopCount int, lossless bool) (imagecompression.Result, error) {
-	if err := validateAnimatedDimensions(width, height, frameCount, c.maxAnimatedFramePixels()); err != nil {
+	if err := imaging.ValidateAnimatedDimensions(width, height, frameCount, c.maxAnimatedFramePixels()); err != nil {
 		return imagecompression.Result{}, err
 	}
 

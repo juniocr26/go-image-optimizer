@@ -1,4 +1,4 @@
-package imaging
+package compress
 
 import (
 	"errors"
@@ -10,6 +10,7 @@ import (
 	"github.com/strukturag/libheif/go/heif"
 
 	"github.com/juniorosa/go-image-optimizer/backend/internal/application/imagecompression"
+	"github.com/juniorosa/go-image-optimizer/backend/internal/infrastructure/imaging"
 )
 
 func (c Compressor) compressHEIF(input []byte, detectedContentType string) (imagecompression.Result, error) {
@@ -31,7 +32,7 @@ func (c Compressor) compressHEIF(input []byte, detectedContentType string) (imag
 		return imagecompression.Result{}, imagecompression.ErrInvalidImage
 	}
 
-	if err := validateImageSize(handle.GetWidth(), handle.GetHeight(), c.maxDecodedPixels()); err != nil {
+	if err := imaging.ValidateImageSize(handle.GetWidth(), handle.GetHeight(), c.maxDecodedPixels()); err != nil {
 		return imagecompression.Result{}, err
 	}
 
@@ -68,8 +69,8 @@ func (c Compressor) compressHEIF(input []byte, detectedContentType string) (imag
 	}
 
 	contentType := detectedContentType
-	if detected, err := detectFormat(output); err == nil && detected.format == imagecompression.FormatHEIF {
-		contentType = detected.contentType
+	if detected, err := imaging.DetectFormat(output); err == nil && detected.Format == imagecompression.FormatHEIF {
+		contentType = detected.ContentType
 	}
 
 	result := staticResult(output, imagecompression.FormatHEIF, contentType, rgba)

@@ -7,36 +7,36 @@ import (
 	"github.com/juniorosa/go-image-optimizer/backend/internal/application/imagecompression"
 )
 
-type detectedFormat struct {
-	format      imagecompression.Format
-	contentType string
+type DetectedFormat struct {
+	Format      imagecompression.Format
+	ContentType string
 }
 
-func detectFormat(input []byte) (detectedFormat, error) {
+func DetectFormat(input []byte) (DetectedFormat, error) {
 	if isUnsupportedCameraRAW(input) {
-		return detectedFormat{}, imagecompression.ErrUnsupportedFormat
+		return DetectedFormat{}, imagecompression.ErrUnsupportedFormat
 	}
 
 	switch {
 	case hasPrefix(input, []byte{0xff, 0xd8, 0xff}):
-		return detectedFormat{format: imagecompression.FormatJPEG, contentType: "image/jpeg"}, nil
+		return DetectedFormat{Format: imagecompression.FormatJPEG, ContentType: "image/jpeg"}, nil
 	case hasPrefix(input, []byte{0x89, 'P', 'N', 'G', '\r', '\n', 0x1a, '\n'}):
-		return detectedFormat{format: imagecompression.FormatPNG, contentType: "image/png"}, nil
+		return DetectedFormat{Format: imagecompression.FormatPNG, ContentType: "image/png"}, nil
 	case hasPrefix(input, []byte("GIF87a")) || hasPrefix(input, []byte("GIF89a")):
-		return detectedFormat{format: imagecompression.FormatGIF, contentType: "image/gif"}, nil
+		return DetectedFormat{Format: imagecompression.FormatGIF, ContentType: "image/gif"}, nil
 	case hasPrefix(input, []byte("BM")):
-		return detectedFormat{format: imagecompression.FormatBMP, contentType: "image/bmp"}, nil
+		return DetectedFormat{Format: imagecompression.FormatBMP, ContentType: "image/bmp"}, nil
 	case hasPrefix(input, []byte{'I', 'I', '*', 0}) || hasPrefix(input, []byte{'M', 'M', 0, '*'}):
-		return detectedFormat{format: imagecompression.FormatTIFF, contentType: "image/tiff"}, nil
+		return DetectedFormat{Format: imagecompression.FormatTIFF, ContentType: "image/tiff"}, nil
 	case isWebP(input):
-		return detectedFormat{format: imagecompression.FormatWebP, contentType: "image/webp"}, nil
+		return DetectedFormat{Format: imagecompression.FormatWebP, ContentType: "image/webp"}, nil
 	}
 
 	if format, ok := detectBMFFImageFormat(input); ok {
 		return format, nil
 	}
 
-	return detectedFormat{}, imagecompression.ErrUnsupportedFormat
+	return DetectedFormat{}, imagecompression.ErrUnsupportedFormat
 }
 
 func hasPrefix(input, prefix []byte) bool {
@@ -118,25 +118,25 @@ func hasTIFFHeader(input []byte) bool {
 	return ok
 }
 
-func detectBMFFImageFormat(input []byte) (detectedFormat, bool) {
+func detectBMFFImageFormat(input []byte) (DetectedFormat, bool) {
 	brands, ok := bmffBrands(input)
 	if !ok {
-		return detectedFormat{}, false
+		return DetectedFormat{}, false
 	}
 
 	if hasBrand(brands, "avif", "avis") {
-		return detectedFormat{format: imagecompression.FormatAVIF, contentType: "image/avif"}, true
+		return DetectedFormat{Format: imagecompression.FormatAVIF, ContentType: "image/avif"}, true
 	}
 
 	if hasBrand(brands, "heic", "heix", "hevc", "hevx", "heim", "heis", "hevm", "hevs") {
-		return detectedFormat{format: imagecompression.FormatHEIF, contentType: "image/heic"}, true
+		return DetectedFormat{Format: imagecompression.FormatHEIF, ContentType: "image/heic"}, true
 	}
 
 	if hasBrand(brands, "heif", "mif1", "msf1") {
-		return detectedFormat{format: imagecompression.FormatHEIF, contentType: "image/heif"}, true
+		return DetectedFormat{Format: imagecompression.FormatHEIF, ContentType: "image/heif"}, true
 	}
 
-	return detectedFormat{}, false
+	return DetectedFormat{}, false
 }
 
 func bmffBrands(input []byte) (map[string]struct{}, bool) {

@@ -1,4 +1,4 @@
-package imaging
+package compress
 
 import (
 	"bytes"
@@ -7,6 +7,7 @@ import (
 	"github.com/gen2brain/avif"
 
 	"github.com/juniorosa/go-image-optimizer/backend/internal/application/imagecompression"
+	"github.com/juniorosa/go-image-optimizer/backend/internal/infrastructure/imaging"
 )
 
 func (c Compressor) compressAVIF(input []byte) (imagecompression.Result, error) {
@@ -15,7 +16,7 @@ func (c Compressor) compressAVIF(input []byte) (imagecompression.Result, error) 
 		return imagecompression.Result{}, imagecompression.ErrInvalidImage
 	}
 
-	if err := validateDimensions(cfg, c.maxDecodedPixels()); err != nil {
+	if err := imaging.ValidateDimensions(cfg, c.maxDecodedPixels()); err != nil {
 		return imagecompression.Result{}, err
 	}
 
@@ -33,7 +34,7 @@ func (c Compressor) compressAVIF(input []byte) (imagecompression.Result, error) 
 	height := firstBounds.Dy()
 
 	if frameCount > 1 {
-		if err := validateAnimatedDimensions(width, height, frameCount, c.maxAnimatedFramePixels()); err != nil {
+		if err := imaging.ValidateAnimatedDimensions(width, height, frameCount, c.maxAnimatedFramePixels()); err != nil {
 			return imagecompression.Result{}, err
 		}
 	}

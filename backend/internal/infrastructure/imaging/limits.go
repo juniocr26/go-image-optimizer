@@ -16,11 +16,11 @@ const (
 	DefaultMaxAnimatedFramePixels = 64_000_000
 )
 
-func validateDimensions(cfg image.Config, maxPixels int) error {
-	return validateImageSize(cfg.Width, cfg.Height, maxPixels)
+func ValidateDimensions(cfg image.Config, maxPixels int) error {
+	return ValidateImageSize(cfg.Width, cfg.Height, maxPixels)
 }
 
-func validateImageSize(width, height, maxPixels int) error {
+func ValidateImageSize(width, height, maxPixels int) error {
 	if width <= 0 || height <= 0 {
 		return imagecompression.ErrInvalidImage
 	}
@@ -32,8 +32,8 @@ func validateImageSize(width, height, maxPixels int) error {
 	return nil
 }
 
-func validateAnimatedDimensions(width, height, frameCount, maxPixels int) error {
-	if err := validateImageSize(width, height, DefaultMaxDecodedPixels); err != nil {
+func ValidateAnimatedDimensions(width, height, frameCount, maxPixels int) error {
+	if err := ValidateImageSize(width, height, DefaultMaxDecodedPixels); err != nil {
 		return err
 	}
 

@@ -7,7 +7,7 @@ import (
 	gometadata "github.com/FlavioCFOliveira/GoMetadata"
 )
 
-func applyOrientation(src image.Image, orientation uint16) image.Image {
+func ApplyOrientation(src image.Image, orientation uint16) image.Image {
 	if orientation <= 1 || orientation > 8 {
 		return src
 	}
@@ -49,7 +49,7 @@ func applyOrientation(src image.Image, orientation uint16) image.Image {
 	return dst
 }
 
-func readEXIFOrientation(input []byte) uint16 {
+func ReadEXIFOrientation(input []byte) uint16 {
 	metadata, err := gometadata.Read(bytes.NewReader(input))
 	if err != nil {
 		return 1
