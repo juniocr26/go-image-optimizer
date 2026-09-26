@@ -2,9 +2,9 @@
 
 An image optimization application built with Go, with a web interface using Next.js, React, and Tailwind CSS.
 
-The project is being developed incrementally, starting with a synchronous compression workflow and evolving its architecture as new requirements and technical challenges emerge.
+Compression and Resize run synchronously, returning processed images directly to the browser.
 
-> **Current status:** Compression and Image Resize are implemented. Resize supports pixels and percentage modes; see [Resize behavior and supported variants](docs/en/resize.md).
+> **Current status:** Compression and Image Resize are implemented. Resize supports pixels and percentage modes; see [Resize behavior and supported variants](docs/en/architecture.md#image-resize).
 
 ## Overview
 
@@ -56,7 +56,7 @@ WebM, SVG, RAW camera formats, videos, and archives are intentionally not suppor
 
 ## Architecture
 
-The initial architecture intentionally keeps image processing within the Go application.
+The current architecture intentionally keeps image processing within the Go application.
 
 ```mermaid
 flowchart LR
@@ -77,7 +77,7 @@ For architectural decisions and trade-offs, see [Architecture](docs/en/architect
 ## Documentation
 
 - [Architecture](docs/en/architecture.md)
-- [Image Resize: UX, API, behavior, and limitations](docs/en/resize.md)
+- [Image Resize: UX, API, behavior, and limitations](docs/en/architecture.md#image-resize)
 - [Docker](docs/en/docker.md)
 - [ADR 001: Native Image Codecs](docs/en/adr-001-native-image-codecs.md)
 - [Arquitetura - Português](docs/pt-BR/architecture.md)

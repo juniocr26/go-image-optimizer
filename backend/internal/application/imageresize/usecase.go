@@ -22,12 +22,11 @@ type Info struct {
 }
 
 type Options struct {
-	Mode               string
-	Width              int
-	Height             int
-	Reduction          int
-	KeepAspectRatio    bool
-	WithoutEnlargement bool
+	Mode            string
+	Width           int
+	Height          int
+	Reduction       int
+	KeepAspectRatio bool
 	// Axis is the last dimension edited by the user when the ratio is locked.
 	Axis string
 }
@@ -141,17 +140,12 @@ func Target(info Info, o Options) (int, int, error) {
 				scale = float64(o.Height) / float64(info.Height)
 			}
 		}
-		if o.WithoutEnlargement {
-			scale = min(scale, 1)
-		}
 		// Check float bounds before converting to int, including hostile ratios.
 		wf, hf := math.Round(float64(info.Width)*scale), math.Round(float64(info.Height)*scale)
 		if wf > MaxPixels || hf > MaxPixels {
 			return 0, 0, imageprocessing.ErrImageTooLarge
 		}
 		w, h = max(1, int(wf)), max(1, int(hf))
-	} else if o.WithoutEnlargement {
-		w, h = min(w, info.Width), min(h, info.Height)
 	}
 	if w > MaxPixels/h {
 		return 0, 0, imageprocessing.ErrImageTooLarge

@@ -118,17 +118,15 @@ func parseOptions(r *http.Request) (imageresize.Options, error) {
 		}
 		return ""
 	}
-	o := imageresize.Options{Mode: value("mode"), Axis: value("axis"), KeepAspectRatio: true, WithoutEnlargement: true}
+	o := imageresize.Options{Mode: value("mode"), Axis: value("axis"), KeepAspectRatio: true}
 	if o.Axis == "" {
 		o.Axis = "width"
 	}
-	for key, destination := range map[string]*bool{"keepAspectRatio": &o.KeepAspectRatio, "withoutEnlargement": &o.WithoutEnlargement} {
-		if v := value(key); len(values[key]) != 0 {
-			if v != "true" && v != "false" {
-				return o, imageresize.ErrInvalidOptions
-			}
-			*destination = v == "true"
+	if v := value("keepAspectRatio"); len(values["keepAspectRatio"]) != 0 {
+		if v != "true" && v != "false" {
+			return o, imageresize.ErrInvalidOptions
 		}
+		o.KeepAspectRatio = v == "true"
 	}
 	var err error
 	if o.Mode == "pixels" {

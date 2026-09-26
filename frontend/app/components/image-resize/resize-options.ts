@@ -13,7 +13,6 @@ export type ResizeOptions = {
   axis: "width" | "height";
   reduction: number;
   keepAspectRatio: boolean;
-  withoutEnlargement: boolean;
 };
 
 export function targetDimensions(info: ImageInfo, options: ResizeOptions) {
@@ -35,12 +34,8 @@ export function targetDimensions(info: ImageInfo, options: ResizeOptions) {
       scale =
         options.axis === "height" ? height / info.height : width / info.width;
     }
-    if (options.withoutEnlargement) scale = Math.min(scale, 1);
     width = Math.max(1, Math.round(info.width * scale));
     height = Math.max(1, Math.round(info.height * scale));
-  } else if (options.withoutEnlargement) {
-    width = Math.min(width, info.width);
-    height = Math.min(height, info.height);
   }
   return { width, height };
 }

@@ -156,27 +156,10 @@ export function ResizeSettings({
               />
               Keep aspect ratio
             </label>
-            <label className="mt-4 flex items-center gap-3 text-sm font-bold">
-              <input
-                type="checkbox"
-                className="h-4 w-4 accent-[#08a87d]"
-                checked={options.withoutEnlargement}
-                onChange={(e) =>
-                  setOptions({
-                    ...options,
-                    withoutEnlargement: e.target.checked,
-                  })
-                }
-              />
-              Don’t enlarge
-            </label>
             <p className="mt-2 text-xs leading-5 text-[#60708d]">
               {options.keepAspectRatio
                 ? "The other dimension adjusts automatically."
-                : "Changing the proportions will stretch the image."}{" "}
-              {options.withoutEnlargement
-                ? "Output is capped at the original dimensions."
-                : ""}
+                : "Changing the proportions will stretch the image."}
             </p>
           </>
         ) : (

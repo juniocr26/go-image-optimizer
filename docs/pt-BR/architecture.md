@@ -1,10 +1,5 @@
 # Arquitetura
 
-## Redimensionamento (Ciclo 2)
-
-A aplicação também implementa Resize síncrono, separado em caso de uso, handler HTTP, implementação de imaging e modal de configuração próprios. Contratos de imagem, helpers HEIF e utilitários de nome de resposta são compartilhados pelas duas funcionalidades. Consulte [Resize](resize.md) para UX, contrato de API, limites, variantes excluídas e o trade-off de duas requisições para inspeção/execução. O fluxo de compressão detalhado abaixo permanece preservado.
-
-
 Este documento descreve a arquitetura atual, os trade-offs e a evolução esperada do Go Image Optimizer.
 
 O projeto evolui de forma incremental. Novos componentes e padrões só devem ser introduzidos quando um requisito concreto ou uma limitação observada justificar essa complexidade.
@@ -13,7 +8,7 @@ O projeto evolui de forma incremental. Novos componentes e padrões só devem se
 
 Go Image Optimizer é uma aplicação para otimização de imagens com backend em Go e interface web construída com Next.js, React e Tailwind CSS.
 
-A implementação atual entrega um fluxo síncrono de compressão exatamente para estes formatos:
+A implementação atual oferece Compressão e Resize síncronos para estas famílias de formato, sujeitas às restrições de variantes de cada funcionalidade descritas abaixo:
 
 - JPEG / JPG
 - PNG
@@ -26,7 +21,7 @@ A implementação atual entrega um fluxo síncrono de compressão exatamente par
 
 WebM, SVG, formatos RAW de câmera, vídeos, arquivos compactados e formatos arbitrários de imagem não são suportados.
 
-## 2. Fluxo atual da requisição
+## 2. Fluxo de compressão
 
 ```mermaid
 sequenceDiagram
@@ -39,7 +34,7 @@ sequenceDiagram
 
     User->>Browser: Seleciona uma imagem suportada
     Browser->>Browser: Cria uma URL Blob temporária quando o navegador consegue renderizar
-    User->>Browser: Clica em Compress
+    User->>Browser: Seleciona Compression e clica em Run
     Browser->>NextAPI: POST /api/images/compress
     NextAPI->>Handler: POST /images/compress
     Handler->>Handler: Valida multipart e limite de upload
@@ -68,7 +63,7 @@ Resumo do pipeline:
 
 ## 3. Fronteiras no backend
 
-O backend possui uma fronteira pequena de aplicação:
+A compressão usa esta fronteira de aplicação:
 
 ```text
 Handler HTTP
@@ -84,14 +79,23 @@ Responsabilidades atuais:
 
 O projeto ainda não cria um modelo de domínio porque a funcionalidade atual não possui entidades de domínio relevantes. A interface do compressor existe como uma fronteira útil entre o caso de uso e a implementação de infraestrutura.
 
-Essa estrutura é melhor descrita como uma arquitetura em camadas pequena e intencional, com separação entre transporte, aplicação e infraestrutura. Ela não é documentada como "Clean Architecture": o projeto aproveita algumas ideias úteis de fronteira, mas não precisa de entidades, repositories, factories ou frameworks de injeção de dependência na fase atual.
+Essa estrutura é melhor descrita como uma arquitetura em camadas pequena e intencional, com separação entre transporte, aplicação e infraestrutura. Ela não é documentada como "Clean Architecture": o projeto aproveita algumas ideias úteis de fronteira, mas não precisa de entidades, repositories, factories ou frameworks de injeção de dependência no escopo atual.
 
-Conclusão da revisão atual:
+### Fronteira de Resize e trade-off das requisições
 
-- IMPLEMENTADO: a direção de dependências é simples e saudável para o escopo atual.
-- DECIDIDO: detalhes específicos de codec pertencem a `internal/infrastructure/imaging`.
-- DECIDIDO: parsing HTTP, mapeamento de status e headers de download pertencem a `internal/infrastructure/http`.
-- FUTURO: dividir o caso de uso ou adicionar tipos de domínio somente quando novos comportamentos criarem regras reais além de "comprimir esta imagem".
+```text
+ImageUploadForm → ImageResizeModal
+  → rota Next.js → handler resize_image
+    → caso de uso application/imageresize
+      → Decoder imaging/resize → Source local à requisição
+        → cálculo das dimensões → reamostragem → encoder da família original
+```
+
+A aplicação define opções, regras de dimensões, interfaces de decodificação/origem, inspeção e execução. Imaging controla pixels e codecs. Tipos comuns de formato/resultado/erro ficam em `application/imageprocessing`, com aliases em compressão para compatibilidade. Decode/encode HEIF e nome seguro de download são compartilhados por necessidade real das duas funcionalidades.
+
+Inspeção e execução são duas requisições síncronas. O arquivo é enviado e decodificado novamente ao executar. Essa escolha evita introduzir ID, cache persistente de upload, banco, Redis, fila, worker ou object storage apenas para configurar uma imagem.
+
+O contexto é verificado antes/depois da decodificação e processamento e entre frames. Uma chamada individual de codec não é interrompida à força pelo cancelamento. Isso não representa processamento em background nem isolamento completo de CPU/memória.
 
 ## 4. Detecção de formato
 
@@ -117,6 +121,72 @@ Comportamento atual dos codecs:
 
 Arquivos já otimizados podem continuar com o mesmo tamanho ou ficar maiores. O frontend exibe medições reais de bytes em vez de presumir redução.
 
+## Redimensionamento de imagens
+
+### Fluxo de uso
+
+Selecione uma imagem, escolha **Resize** e clique em **Run**. O modal de configuração abre sem mudar o layout da Home, consulta as dimensões no backend e mostra o preview original (ou fallback do navegador) e as dimensões previstas da saída.
+
+- **Pixels** começa com as dimensões originais, considerando a orientação de exibição. **Keep aspect ratio** vem marcado. A última dimensão editada determina o cálculo proporcional da outra. Destravar permite distorcer a proporção; não há recorte nem preenchimento.
+- **Percentage** oferece **25% smaller**, **50% smaller** e **75% smaller**, com 50% selecionado inicialmente. A porcentagem reduz largura e altura, não os bytes nem a área total de pixels.
+- O arredondamento é para o inteiro mais próximo, com mínimo de um pixel. Reduzir 899 × 1599 em 50% resulta em 450 × 800.
+- Pixels permite ampliar dentro dos limites de recursos. O resumo mostra as dimensões efetivas e uma nota discreta explica que ampliar não adiciona detalhes.
+- **Resize image** executa a operação. **Cancel**, o botão de fechar e Escape fecham a configuração quando não há processamento. Clicar no fundo não fecha. Durante o processamento, opções e fechamento ficam desabilitados; o carregamento é indeterminado.
+- O resultado substitui o modal de configuração e mostra dimensões e tamanhos reais, preview/fallback e download. O modal de resultado mantém o fechamento explícito existente.
+- O original continua selecionado para outra operação. Reabrir a configuração restaura os valores iniciais. Erros de processamento mantêm as opções; erros na leitura de dimensões oferecem uma ação de tentar novamente.
+
+O modal de configuração usa dialog nativo para conter o foco e tornar o fundo inativo, foco inicial no título, abas navegáveis por teclado, bloqueio de rolagem do body e restauração do foco. Em telas estreitas, vira uma coluna com conteúdo rolável e rodapé fixo dentro do modal.
+
+### API
+
+As duas rotas recebem `multipart/form-data` com exatamente um arquivo no campo `image`. Formato e dimensões vêm dos bytes reais; MIME do navegador, extensão e dimensões informadas pelo cliente não são fontes de verdade.
+
+#### POST /images/resize/info
+
+Retorna JSON, por exemplo:
+
+```json
+{"width":899,"height":1599,"format":"jpeg","contentType":"image/jpeg","frameCount":1}
+```
+
+A inspeção valida e decodifica a origem, sem recodificar nem persistir. As dimensões consideram a orientação EXIF de JPEG e a orientação nativa suportada. Isso funciona também quando o navegador não consegue gerar preview. A leitura pode custar mais em imagens grandes/codecs nativos; o modal mostra carregamento. Fechar o modal aborta a requisição no navegador.
+
+#### POST /images/resize
+
+| Campo | Contrato |
+| --- | --- |
+| `mode` | Obrigatório: `pixels` ou `percentage` |
+| `width`, `height` | Obrigatórios em pixels: inteiros positivos, individualmente até 32.000.000; a saída efetiva também deve respeitar o limite total de pixels |
+| `axis` | `width` (padrão) ou `height`: última dimensão editada, usada no cálculo proporcional |
+| `keepAspectRatio` | `true` (padrão) ou `false`; aplica-se ao modo pixels |
+| `reduction` | Obrigatório em percentage: `25`, `50` ou `75` |
+
+Booleanos usam literalmente `true`/`false`; valores explicitamente vazios são rejeitados. Os padrões valem quando o campo é omitido. Opções repetidas, arquivos adicionais e campos `image` misturando texto e arquivo são rejeitados. A interface envia números válidos como inteiros decimais, inclusive quando digitados em notação exponencial. Percentage ignora largura/altura e sempre preserva proporção. O servidor recalcula a saída a partir do arquivo enviado; dimensões de origem não são controladas pelo cliente. A operação sempre parte do original selecionado, nunca de um resultado anterior.
+
+A resposta de sucesso contém os bytes e:
+
+- `Content-Type`, `Content-Length` e `Content-Disposition` com nome sanitizado `*_resized` e extensão da família real;
+- `X-Original-Width`, `X-Original-Height`, `X-Image-Width`, `X-Image-Height`, em pixels com orientação de exibição;
+- `Cache-Control: no-store`.
+
+Erros retornam JSON `{ "error": "..." }`: 400 para input/opções inválidos, 413 para limites, 415 para formato não suportado, 422 para variante não suportada e 500 para falhas internas/de codec. O proxy Next.js retorna 502 quando não consegue acessar o backend.
+
+As rotas de mesma origem no Next.js são `/api/images/resize/info` e `/api/images/resize`. Um helper de encaminhamento, compartilhado com compressão, repassa multipart, status, MIME, nome e headers de dimensões.
+
+### Comportamento e limites
+
+- JPEG, PNG, WebP, AVIF estático, HEIC/HEIF suportado com uma imagem, GIF, BMP e TIFF de uma página mantêm sua família de formato. A compressão existente mantém seu suporte anterior.
+- A orientação EXIF de JPEG é normalizada antes do cálculo. AVIF/HEIF seguem o comportamento de orientação dos codecs nativos instalados.
+- A reamostragem Catmull–Rom trabalha em RGBA pré-multiplicado. Alpha de PNG/WebP é preservado; resize altera pixels, portanto não é uma operação pixel-identical. BMP mantém as limitações de seu encoder.
+- Frames parciais de GIF são compostos respeitando disposal antes da reamostragem. A saída usa frames de canvas completo, paleta web-safe, transparência binária, delays e loop originais. Quantização de cores/paleta e representação interna de disposal podem mudar.
+- WebP animado preserva os frames reconstruídos, tempos, loop, fundo e ICC quando presente. O Resize não copia EXIF/XMP para evitar dimensões/orientação desatualizadas. Não há preservação universal de metadados.
+- **AVIF animado é rejeitado.** O decoder `gen2brain/avif` v0.6.0 fornece frames e delays, mas não preenche `LoopCount`; por isso não é possível prometer preservação de loops finitos. APNG, TIFF multipágina e HEIF multi-imagem não suportado também são rejeitados, sem achatamento silencioso.
+- Os limites compartilhados abaixo valem para inspeção e execução. Resize também limita a saída a **32 milhões de pixels** e a saída animada a **64 milhões de pixels de canvas-frame**. Descritores GIF e quantidade de frames do container WebP são verificados antes da decodificação completa.
+- Se as dimensões efetivas forem iguais às originais de exibição, os bytes originais são devolvidos intactos, preservando metadados e evitando recodificação com perda desnecessária.
+- Nos demais casos, os parâmetros de encode acompanham os padrões existentes (JPEG/WebP 82, AVIF/HEIF 60; PNG best compression; TIFF Deflate). O resultado pode ser maior em bytes. Não há lote, recorte, conversão, histórico, progresso percentual nem promessa de ganho de detalhe.
+
+Consulte a [documentação de testes](../../TESTS_README.pt-BR.md) para cobertura automatizada e validação da interface.
+
 ## 6. Ciclo de vida dos arquivos e armazenamento
 
 O ciclo de vida atual no backend é efêmero:
@@ -125,13 +195,13 @@ O ciclo de vida atual no backend é efêmero:
 Navegador
     -> POST da imagem
     -> Go recebe os bytes
-    -> Go comprime os bytes
+    -> Go comprime ou redimensiona os bytes
     -> Go retorna os bytes otimizados
     -> Navegador mantém o resultado temporariamente
     -> Usuário baixa o resultado
 ```
 
-Imagens enviadas e imagens comprimidas não são persistidas em armazenamento da aplicação. O backend não cria IDs de processamento, registros em banco de dados, registros no Redis, objetos em storage, URLs de resultado, filas, jobs em background, histórico de processamento ou limpeza por TTL.
+Imagens enviadas e imagens processadas não são persistidas em armazenamento da aplicação. O backend não cria IDs de processamento, registros em banco de dados, registros no Redis, objetos em storage, URLs de resultado, filas, jobs em background, histórico de processamento ou limpeza por TTL.
 
 `storage/testdata/images` é um diretório versionado de fixtures de teste. Ele contém arquivos reais de entrada para testes de integração e não é usado pela aplicação em execução para uploads ou resultados. Os testes leem essas fixtures e mantêm as saídas comprimidas em memória ou em caminhos temporários do sistema operacional.
 
@@ -141,7 +211,7 @@ A codificação HEIC/HEIF usa internamente a API de saída para arquivo do bindi
 
 ## 7. Processamento síncrono
 
-Hoje a compressão roda de forma síncrona dentro da requisição HTTP em Go porque a aplicação devolve um download imediato.
+Compressão e Resize rodam de forma síncrona dentro da requisição HTTP em Go porque a aplicação devolve um download imediato.
 
 A aplicação não declara características de alta vazão ou escalabilidade. Qualquer afirmação desse tipo precisa ser medida em cargas realistas antes de entrar na documentação.
 
@@ -154,7 +224,7 @@ Proteções atuais de recursos:
 
 ## 8. Ciclo de vida no frontend
 
-O frontend é uma aplicação Next.js. `app/page.tsx` permanece como camada de composição da Home e delega seções específicas da Home para `app/components/home/*`. `ImageUploadForm` mantém o estado client-side de seleção, envio e resultado em `app/components/image-upload/`, enquanto componentes filhos locais da feature cuidam da drop zone, controles de operação, modal de resultado, preview no navegador, métricas de resultado, ícones, tipos e lógica auxiliar de imagem/arquivo. A rota Next.js `app/api/images/compress/route.ts` encaminha requisições multipart para o backend Go preservando headers relevantes da resposta.
+O frontend é uma aplicação Next.js. `app/page.tsx` permanece como camada de composição da Home e delega seções específicas da Home para `app/components/home/*`. `ImageUploadForm` mantém o estado client-side de seleção, envio e resultado em `app/components/image-upload/`, enquanto componentes filhos locais da feature cuidam da drop zone, controles de operação, modal de resultado, preview no navegador, métricas de resultado, ícones, tipos e lógica auxiliar de imagem/arquivo. As rotas Next.js em `app/api/images/` encaminham requisições multipart para o backend Go preservando headers relevantes da resposta.
 
 O frontend mantém o fluxo em estado React:
 
@@ -162,19 +232,14 @@ O frontend mantém o fluxo em estado React:
 - preview da imagem selecionada quando o navegador consegue renderizar o formato;
 - placeholder sem preview para formatos que muitos navegadores não renderizam, como HEIC ou TIFF;
 - tamanho original do arquivo;
-- ação explícita de Compress;
+- seleção de operação e ação explícita de Run;
+- configuração de Resize com inspeção da origem e dimensões efetivas;
 - estado de carregamento indeterminado;
 - preview do resultado quando o navegador consegue renderizar;
 - medições reais em bytes, cálculo de redução e ação de download;
 - reinício do fluxo para outra imagem.
 
-A interface não persiste a sessão em `localStorage`, IndexedDB, armazenamento do backend ou qualquer outro armazenamento durável. Após recarregar a página, a imagem selecionada e o resultado desaparecem por decisão do MVP.
-
-Conclusão da revisão atual do frontend:
-
-- IMPLEMENTADO: a UI no navegador, as seções da Home, os componentes da feature de upload de imagem, a rota de encaminhamento da API e a API backend têm fronteiras de responsabilidade claras para a funcionalidade atual.
-- IMPLEMENTADO: `ImageUploadForm` continua sendo dono do estado do fluxo, enquanto validação, constantes de formato, nomes de arquivo, formatação de bytes, fallback de preview, métricas de resultado e comportamento acessível do modal vivem em módulos locais e focados da feature.
-- DECIDIDO: não adicionar um framework de testes frontend nesta fase focada no backend.
+A interface não persiste a sessão em `localStorage`, IndexedDB, armazenamento do backend ou qualquer outro armazenamento durável. Após recarregar a página, a imagem selecionada e o resultado desaparecem por decisão da aplicação.
 
 ## 9. Fronteira entre containers frontend e backend
 
@@ -190,7 +255,7 @@ Consulte [ADR 001: Codecs nativos de imagem](adr-001-codecs-nativos.md) e [Docke
 
 ## 11. Limitações atuais
 
-- A compressão é síncrona.
+- Compressão e Resize são síncronos.
 - Preservação de metadados é best-effort e específica por formato, não uma garantia universal.
 - Variantes não suportadas são rejeitadas em vez de aproximadas.
 - Algumas saídas podem ter o mesmo tamanho ou ficar maiores que o arquivo enviado.

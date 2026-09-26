@@ -61,7 +61,6 @@ export function ImageResizeModal({
     axis: "width",
     reduction: 50,
     keepAspectRatio: true,
-    withoutEnlargement: true,
   });
 
   useEffect(() => {

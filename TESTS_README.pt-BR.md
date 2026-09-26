@@ -4,7 +4,7 @@ Este documento descreve a estratégia atual de testes do Go Image Optimizer.
 
 ## Estratégia
 
-O backend possui testes automatizados em Go para a fronteira de aplicação, a implementação de compressão de imagens, o contrato HTTP, regressões determinísticas de codec e fixtures reais de integração. O frontend, neste MVP, é validado pelo build de produção e por validação manual do fluxo; nenhum framework de testes de frontend foi adicionado.
+O backend possui testes automatizados em Go para a fronteiras de aplicação, as implementações de compressão e resize, os contratos HTTP, regressões determinísticas de codec e fixtures reais de integração. O frontend tem testes de regressão do cálculo de dimensões usando o runner nativo do Node.js, verificações TypeScript/build e validação manual do fluxo; não há framework de testes de navegador instalado.
 
 Os testes evitam afirmar que toda imagem otimizada precisa ficar menor. Algumas imagens reais já chegam otimizadas. As asserções de redução de tamanho ficam limitadas a fixtures determinísticas criadas especificamente para esse caso.
 
@@ -37,7 +37,7 @@ Os testes automatizados do backend cobrem:
 - nomes de download gerados;
 - spoofing de extensão, em que o tipo de resposta segue os bytes detectados e não o nome enviado.
 
-## Matriz de cobertura de formatos no backend
+## Matriz de cobertura de formatos da compressão
 
 | Formato | Compressão invocada | Saída decodificada | Formato preservado | Dimensões verificadas | Propriedades específicas verificadas |
 | --- | --- | --- | --- | --- | --- |
@@ -89,7 +89,7 @@ A validação manual da interface deve cobrir:
 - seleção pelo file picker;
 - previews para formatos que o navegador consegue renderizar;
 - placeholder para formatos que o navegador não consegue pré-visualizar, como muitos arquivos HEIC ou TIFF;
-- comportamento do botão Compress;
+- seleção da operação e comportamento do botão Run;
 - bloqueio de envios duplicados durante a compressão;
 - estado de carregamento indeterminado;
 - preview do resultado;
@@ -122,7 +122,7 @@ O comando padrão executa `go test -v ./...`, então nomes de pacotes, testes, s
 Para passar flags customizadas do Go test no mesmo ambiente:
 
 ```bash
-docker compose run --rm backend-test go test -v ./internal/infrastructure/imaging -run TestCompressorRealFixtures
+docker compose run --rm backend-test go test -v ./internal/infrastructure/imaging/compress -run TestCompressorRealFixtures
 ```
 
 Testes do backend com Go instalado localmente continuam suportados quando as dependências nativas correspondentes estão instaladas localmente:
@@ -134,12 +134,15 @@ CGO_ENABLED=1 go test -v ./...
 
 Testes locais de HEIC/HEIF exigem bibliotecas de desenvolvimento nativas da libheif e plugins de codec HEVC. O Docker Compose é o caminho recomendado quando essas dependências não estão instaladas localmente.
 
-Build de produção do frontend:
+Verificação TypeScript e build de produção no ambiente Docker documentado:
 
 ```bash
-cd frontend
-npm run build
+docker compose run --rm --no-deps frontend-dev node --test tests/resize-options.test.mjs
+docker compose run --rm --no-deps frontend-dev npx tsc --noEmit
+docker compose run --rm --no-deps -e NODE_ENV=production frontend-dev npm run build
 ```
+
+A variável de produção é necessária porque `frontend-dev` define `NODE_ENV=development`. Não há script de lint no frontend.
 
 Validação smoke com Docker:
 
@@ -151,36 +154,23 @@ Depois, abra o frontend, envie amostras representativas de JPEG/JPG, PNG, WebP, 
 
 ## Limitações atuais
 
-- Não há suíte de interação no navegador versionada; o smoke test abaixo usou ferramentas temporárias.
+- Não há suíte de interação no navegador versionada.
 - Não há asserções visuais de qualidade para a saída JPEG.
-- A verificação do frontend inclui TypeScript, build e o smoke test direcionado descrito abaixo.
+- TypeScript/build não verificam interações no navegador nem certificam compatibilidade entre navegadores.
 - A validação com Docker Compose é um smoke test, não um teste de carga ou escalabilidade.
 - `go test -race ./...` está bloqueado no momento por uma falha de `checkptr` dentro de `github.com/strukturag/libheif` durante a geração das fixtures HEIC/HEIF; a suíte normal sem `-race` passa.
 - WebM, SVG, RAW, vídeo e arquivos compactados são intencionalmente não suportados e entram na cobertura como comportamento de entrada não suportada, não como testes de codec.
 - Nenhum percentual de cobertura é declarado.
 
-## Cobertura de Resize (Ciclo 2)
+## Cobertura de Resize
 
-- Testes de aplicação cobrem os dois modos, arredondamento de dimensões ímpares, mínimo de um pixel, âncora de largura/altura, distorção, ampliação opcional, bloqueio de ampliação proporcional/por eixo, parâmetros inválidos, limites de saída/animação, proporções extremas, cancelamento e retorno dos bytes originais sem alteração de dimensões.
-- Testes de imaging redimensionam as nove fixtures reais, decodificam a saída independentemente e verificam dimensões, formato detectado e MIME. Testes sintéticos cobrem EXIF JPEG, alpha PNG/WebP lossless, GIF com frames parciais e disposal previous/background, delays/loops GIF, tempos/loops WebP, input inválido e limite de frames GIF antes do decode. AVIF animado é rejeitado explicitamente porque o decoder instalado perde metadados de loop.
-- Integração HTTP cobre inspeção, headers, spoofing de formato/nome, defaults, opções inválidas (fracionários/overflow/NaN), multipart malformado, limite de upload e limite de pixels de saída.
-- `docker compose run --rm backend-test` inclui Resize e regressões de compressão. Os codecs HEIF nativos continuam necessários. Este ciclo não afirma corrigir a suíte completa com `-race`.
+- Testes de cálculo no frontend cobrem dimensões inalteradas, ampliação por ambas as âncoras, dimensões independentes, três reduções, arredondamento, entradas inválidas e limites de pixels/frames de saída. Usam o Node.js 24 da imagem Docker do frontend.
 
-Validação de interface: Run abre a configuração sem executar Resize; dimensões consideram orientação; editar um campo atualiza o outro; destravar permite distorção; Don't enlarge limita a saída efetiva; porcentagens indicam redução linear; valores inválidos impedem envio; loading/erros ficam no modal; retry funciona; dimensões/download são reais; cancelar/Escape restauram foco; Tab permanece no dialog; conteúdo mobile rola com rodapé acessível; fallback HEIC/TIFF permite processar; repetir parte do original. Revalidar compressão após Resize. São verificações do fluxo no navegador, sem introdução de framework frontend/E2E.
+- Testes de aplicação cobrem os dois modos, arredondamento de dimensões ímpares, mínimo de um pixel, âncora de largura/altura, distorção, ampliação proporcional por ambos os eixos e ampliação independente, parâmetros inválidos, limites de saída/animação, proporções extremas, cancelamento e retorno dos bytes originais sem alteração de dimensões.
+- Testes de imaging redimensionam as nove fixtures reais, decodificam a saída independentemente e verificam dimensões, formato detectado e MIME. Requisições sem alteração de dimensões são verificadas byte a byte nas nove fixtures. Testes sintéticos cobrem EXIF JPEG e posição dos pixels após rotação, alpha PNG/WebP lossless, GIF com frames parciais e disposal previous/background, delays/loops GIF, tempos/loops WebP, input inválido, limites de pixels PNG antes do decode e limites de frames GIF/WebP. AVIF animado é rejeitado explicitamente porque o decoder instalado perde metadados de loop.
+- Integração HTTP cobre inspeção, headers, spoofing de formato/nome, ampliação padrão por ambas as âncoras, dimensões independentes, bytes originais quando o tamanho não muda, dimensões decodificadas correspondentes aos headers, opções inválidas (fracionários/overflow/NaN), multipart malformado/ambíguo, opções duplicadas, booleanos vazios, status de variante não suportada, limite de upload e limite de pixels de saída.
+- `docker compose run --rm backend-test` inclui Resize e regressões de compressão. Os codecs HEIF nativos continuam necessários. A limitação de `-race` acima continua aplicável.
 
-Consulte [comportamento/API do Resize](docs/pt-BR/resize.md).
+Validação de interface: Run abre a configuração sem executar Resize; dimensões consideram orientação; editar um campo atualiza o outro; destravar permite distorção; ampliação mostra a nota sobre detalhes e corresponde às dimensões baixadas; porcentagens indicam redução linear; valores inválidos impedem envio; loading/erros ficam no modal; retry funciona; dimensões/download são reais; cancelar/Escape restauram foco; Tab permanece no dialog; conteúdo mobile rola com rodapé acessível; fallback HEIC/TIFF permite processar; repetir parte do original. Revalidar compressão após Resize. São verificações manuais do fluxo no navegador, separadas dos testes automatizados de cálculo.
 
-## Verificação da conclusão do Resize — 25/09/2026
-
-- `docker compose run --rm backend-test`: suíte Go completa, incluindo compressão e resize, passou.
-- `docker compose run --rm backend-test go vet ./...`: passou.
-- `docker compose run --rm --no-deps frontend-dev npx tsc --noEmit`: passou. Não há script de lint configurado no frontend.
-- `docker compose run --rm --no-deps -e NODE_ENV=production frontend-dev npm run build`: passou. Sem essa variável, o build no serviço de desenvolvimento falhou no prerender por usar `NODE_ENV=development`.
-- `docker compose up -d --build backend frontend`: imagens de produção construídas e serviços iniciados; a validação no navegador utilizou essas imagens.
-- Microsoft Edge headless com Playwright temporário, fora do repositório: desktop 1280×900 e mobile 390×640 passaram nas verificações de X visível, fechar/Cancel/Escape, contenção/restauração de foco, backdrop, Pixels/Percentage, âncoras de proporção, distorção, ampliação/limites, validação, três porcentagens, bytes originais no caso sem alteração, dimensões reais do PNG baixado, bloqueio durante processamento, erros injetados/retry fallback/download HEIC/TIFF, carregamento/cancelamento da inspeção e compressão posterior. Nenhum erro JavaScript foi observado. É um smoke test direcionado, não uma suíte E2E mantida nem certificação entre navegadores.
-- `npx tsc --noEmit` / `npm run build` locais não iniciaram porque `npx`/`npm` não estão no PATH do host; os equivalentes Docker passaram.
-- `GOCACHE=/tmp/go-image-optimizer-cache CGO_ENABLED=1 go test ./...` local não compilou os pacotes nativos: `pkg-config` não está no PATH. A tentativa inicial sem redirecionar o cache também encontrou restrição do sandbox. O resultado validado com codecs nativos é o do Docker.
-
-A cobertura adicional verifica bytes intactos nos nove fixtures quando as dimensões não mudam, posição dos pixels após orientação EXIF, limites antes do decode em PNG/WebP, multipart ambíguo, opções duplicadas, booleanos vazios e status de variante não suportada.
-
-O X ausente foi reproduzido na imagem antiga em execução: padding conflitante do botão reduzia a largura do SVG a zero. O botão atual tem dimensões próprias e o ícone compartilhado agora tem dimensões explícitas e não encolhe no flex. Reconstrua os containers de produção após alterações; eles não montam o código-fonte do frontend.
+Consulte [comportamento/API do Resize](docs/pt-BR/architecture.md#redimensionamento-de-imagens).

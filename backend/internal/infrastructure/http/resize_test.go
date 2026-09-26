@@ -78,10 +78,30 @@ func TestResizeHTTPMetadataAndDownload(t *testing.T) {
 	}
 	decoded := decodePNG(t, response.Body.Bytes())
 	assertDimensions(t, decoded, 11, 6)
-	response = httptest.NewRecorder()
-	router.ServeHTTP(response, resizeRequest(t, "/images/resize", "photo.png", input, map[string]string{"mode": "pixels", "width": "42", "height": "22"}))
-	if response.Code != 200 || !bytes.Equal(response.Body.Bytes(), input) {
-		t.Fatal("default no-enlarge should return original bytes")
+	for _, tt := range []struct {
+		name    string
+		options map[string]string
+		w, h    int
+	}{
+		{"default width anchor enlarges", map[string]string{"mode": "pixels", "width": "42", "height": "1"}, 42, 22},
+		{"height anchor enlarges", map[string]string{"mode": "pixels", "width": "1", "height": "22", "axis": "height"}, 42, 22},
+		{"independent dimensions", map[string]string{"mode": "pixels", "width": "42", "height": "5", "keepAspectRatio": "false"}, 42, 5},
+		{"same size", map[string]string{"mode": "pixels", "width": "21", "height": "11"}, 21, 11},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			response := httptest.NewRecorder()
+			router.ServeHTTP(response, resizeRequest(t, "/images/resize", "photo.png", input, tt.options))
+			if response.Code != 200 {
+				t.Fatalf("resize: %d %s", response.Code, response.Body.String())
+			}
+			assertDimensions(t, decodePNG(t, response.Body.Bytes()), tt.w, tt.h)
+			if response.Header().Get("X-Image-Width") != strconv.Itoa(tt.w) || response.Header().Get("X-Image-Height") != strconv.Itoa(tt.h) {
+				t.Fatal("headers disagree with encoded dimensions")
+			}
+			if tt.w == 21 && tt.h == 11 && !bytes.Equal(response.Body.Bytes(), input) {
+				t.Fatal("same-size request must return original bytes")
+			}
+		})
 	}
 }
 
@@ -101,11 +121,11 @@ func TestResizeHTTPValidation(t *testing.T) {
 		{"negative pixels", "image.png", input, map[string]string{"mode": "pixels", "width": "-1", "height": "4"}, 400},
 		{"overflow", "image.png", input, map[string]string{"mode": "pixels", "width": "999999999999999999999999999999", "height": "4"}, 400},
 		{"NaN", "image.png", input, map[string]string{"mode": "pixels", "width": "NaN", "height": "4"}, 400},
-		{"empty bool", "image.png", input, map[string]string{"mode": "percentage", "reduction": "50", "withoutEnlargement": ""}, 400},
+		{"empty bool", "image.png", input, map[string]string{"mode": "percentage", "reduction": "50", "keepAspectRatio": ""}, 400},
 		{"invalid bool", "image.png", input, map[string]string{"mode": "percentage", "reduction": "50", "keepAspectRatio": "maybe"}, 400},
 		{"invalid reduction", "image.png", input, map[string]string{"mode": "percentage", "reduction": "150"}, 400},
 		{"invalid axis", "image.png", input, map[string]string{"mode": "pixels", "width": "4", "height": "4", "axis": "depth"}, 400},
-		{"output budget", "image.png", input, map[string]string{"mode": "pixels", "width": "10000", "height": "10000", "keepAspectRatio": "false", "withoutEnlargement": "false"}, 413},
+		{"output budget", "image.png", input, map[string]string{"mode": "pixels", "width": "10000", "height": "10000", "keepAspectRatio": "false"}, 413},
 		{"multi-page TIFF", "image.tiff", []byte{'I', 'I', 42, 0, 8, 0, 0, 0, 0, 0, 14, 0, 0, 0, 0, 0, 0, 0}, map[string]string{"mode": "percentage", "reduction": "50"}, 422},
 		{"unknown format", "image.png", []byte("hello"), map[string]string{"mode": "percentage", "reduction": "50"}, 415},
 		{"corrupt PNG", "image.png", []byte{0x89, 'P', 'N', 'G', '\r', '\n', 0x1a, '\n'}, map[string]string{"mode": "percentage", "reduction": "50"}, 400},
