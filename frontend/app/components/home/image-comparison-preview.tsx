@@ -69,7 +69,7 @@ export function ImageComparisonPreview() {
       </div>
 
       <div className="handwritten pointer-events-none absolute right-[3%] top-0 hidden rotate-[-6deg] text-[25px] font-bold leading-[1.05] text-[#6f7f9d] sm:block lg:right-[7%] lg:top-[2%] lg:text-[29px]">
-        <p>Same dimensions</p>
+        <p>Compression keeps dimensions</p>
         <p>Smaller when possible</p>
         <svg
           aria-hidden="true"

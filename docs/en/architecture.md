@@ -1,5 +1,10 @@
 # Architecture
 
+## Image Resize (Cycle 2)
+
+The current application also implements synchronous Image Resize, separated into its own application use case, HTTP handler, imaging implementation, and configuration modal. Shared image contracts, HEIF helpers, and response filename utilities serve both features. See [Image Resize](resize.md) for the UX, API contract, limits, variant exclusions, and the two-request inspection/processing trade-off. The compression pipeline detailed below remains unchanged.
+
+
 This document describes the current architecture, trade-offs, and expected evolution of the Go Image Optimizer.
 
 The project is intentionally incremental. New components and patterns are introduced only when a concrete requirement or observed limitation justifies the complexity.

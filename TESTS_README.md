@@ -151,10 +151,34 @@ Then open the frontend, upload representative JPEG/JPG, PNG, WebP, AVIF, HEIC/HE
 
 ## Current Limitations
 
-- There are no automated browser interaction tests yet.
+- There is no checked-in browser interaction test suite; the targeted browser smoke checks below used temporary tooling.
 - There are no visual quality assertions for JPEG output.
-- The frontend workflow is manually validated.
+- Frontend verification includes TypeScript/build checks and the targeted browser smoke checks below; it is not a cross-browser certification.
 - Docker Compose validation is a smoke test, not a load or scalability test.
 - `go test -race ./...` is currently blocked by a `checkptr` failure inside `github.com/strukturag/libheif` while HEIC/HEIF fixtures are encoded; the normal non-race suite passes.
 - WebM, SVG, RAW, video, and archive formats are intentionally unsupported and are covered as unsupported-input behavior rather than codec tests.
 - No test coverage percentage is claimed.
+
+## Image Resize coverage (Cycle 2)
+
+- Application tests cover both modes, odd-dimension rounding, minimum one pixel, width/height ratio anchors, stretching, optional enlargement, per-axis/proportional no-upscale, invalid parameters, output pixel/frame budgets, hostile aspect ratios, cancellation, and original-byte no-op behavior.
+- Imaging tests resize all nine real fixtures, independently decode outputs, and check dimensions, detected format, and MIME. Same-size requests are checked byte-for-byte for all nine fixtures. Synthetic tests cover JPEG EXIF orientation and rotated pixel placement, PNG/lossless WebP alpha, GIF partial frames with previous/background disposal, GIF timing/loops, WebP animation timing/loops, invalid input, pre-decode PNG pixel limits, and GIF/WebP frame budgets. Animated AVIF is explicitly rejected because the installed decoder loses loop metadata.
+- HTTP integration tests cover metadata, download headers, format/filename spoofing, defaults, invalid options (including fractional/overflow/NaN values), malformed/ambiguous multipart, duplicate options, empty booleans, unsupported-variant status, upload limits, and output pixel budgets.
+- The normal `docker compose run --rm backend-test` command includes Resize and compression regression tests. Native HEIF codecs remain required. This work does not claim the full `-race` suite is fixed.
+
+UI checks for Resize: Run opens configuration without resizing; dimensions match orientation; editing either field updates the other; ratio unlock stretches; Don't enlarge caps the effective output; percentage labels show linear reductions; invalid targets disable submission; loading and errors stay in the modal; retry works; output dimensions and download are real; cancel/Escape restore focus; keyboard tabs remain in the dialog; mobile content scrolls with accessible footer; HEIC/TIFF fallback still allows processing; repeat operations use the original. Recheck compression after Resize. These are browser workflow checks, not a newly installed frontend/E2E test framework.
+
+See [Resize behavior/API](docs/en/resize.md).
+
+## Resize completion verification — 2026-09-25
+
+- `docker compose run --rm backend-test`: full Go suite, including compression and resize, passed.
+- `docker compose run --rm backend-test go vet ./...`: passed.
+- `docker compose run --rm --no-deps frontend-dev npx tsc --noEmit`: passed. No frontend lint script is configured.
+- `docker compose run --rm --no-deps -e NODE_ENV=production frontend-dev npm run build`: passed. Running the build in `frontend-dev` without the production override failed during prerendering because that service sets `NODE_ENV=development`.
+- `docker compose up -d --build backend frontend`: production images built and services started successfully; browser checks exercised these images.
+- Headless Microsoft Edge with temporary Playwright tooling (outside the repository): desktop 1280×900 and mobile 390×640 passed close-icon visibility, close/Cancel/Escape, focus containment/restoration, backdrop behavior, Pixels/Percentage, both ratio anchors, stretching, enlargement/capping, validation, all three reductions, unchanged original bytes, actual PNG download dimensions, loading/dismissal lock, injected errors/retry, HEIC/TIFF fallback resize/downloads, inspection loading/cancel, and compression afterward. No browser JavaScript errors were observed. This is a targeted smoke run, not a maintained E2E suite.
+- Local `npx tsc --noEmit` / `npm run build` could not start because `npx`/`npm` are absent from the host PATH; Docker equivalents above passed.
+- Local `GOCACHE=/tmp/go-image-optimizer-cache CGO_ENABLED=1 go test ./...` could not build native imaging packages: `pkg-config` is absent from PATH. The initial command without the cache override also encountered a sandbox-denied Go cache path. Docker tests are the verified native-codec result.
+
+The missing X was reproduced in the older running image: conflicting button padding reduced the SVG width to zero. The current button has dedicated sizing, and the shared close icon now has explicit dimensions and cannot flex-shrink. Rebuild production containers after source changes; they do not mount frontend source.

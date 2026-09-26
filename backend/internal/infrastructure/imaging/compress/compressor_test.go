@@ -811,3 +811,14 @@ func assertPixelsEqual(t *testing.T, expected image.Image, actual image.Image) {
 		}
 	}
 }
+
+func toRGBA(img image.Image) *image.RGBA {
+	b := img.Bounds()
+	out := image.NewRGBA(image.Rect(0, 0, b.Dx(), b.Dy()))
+	for y := 0; y < b.Dy(); y++ {
+		for x := 0; x < b.Dx(); x++ {
+			out.Set(x, y, img.At(b.Min.X+x, b.Min.Y+y))
+		}
+	}
+	return out
+}

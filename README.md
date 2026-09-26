@@ -4,7 +4,7 @@ An image optimization application built with Go, with a web interface using Next
 
 The project is being developed incrementally, starting with a synchronous compression workflow and evolving its architecture as new requirements and technical challenges emerge.
 
-> **Current status:** The compression flow is implemented for JPEG/JPG, PNG, WebP, AVIF, HEIC/HEIF, GIF, BMP, and TIFF.
+> **Current status:** Compression and Image Resize are implemented. Resize supports pixels and percentage modes; see [Resize behavior and supported variants](docs/en/resize.md).
 
 ## Overview
 
@@ -12,21 +12,21 @@ Go Image Optimizer is a portfolio project focused on exploring image processing 
 
 Instead of designing a complex architecture upfront, the project follows an incremental approach: start with a simple solution, validate the requirements, and introduce architectural changes when there is a concrete reason for them.
 
-## Initial Scope
+## Current Scope
 
-The current feature allows users to:
+The application allows users to:
 
 - Upload an image through the web interface.
 - Send the image to the Go backend.
-- Compress the image.
-- Receive the compressed image as the result.
-- Download the compressed image directly from the browser.
+- Compress the image or configure Resize by pixels/percentage in a modal.
+- Receive the processed image with measured result information.
+- Download the result directly from the browser.
 
-The backend detects the real image format from file bytes rather than trusting extensions or browser MIME labels. The application returns the same image format family it receives, preserves dimensions, and does not promise every output will be smaller.
+The backend detects the real image format from file bytes rather than trusting extensions or browser MIME labels. The application returns the same image format family it receives, preserves dimensions during compression, and changes them explicitly during Resize. Neither operation promises every output will be smaller.
 
 Additional image optimization capabilities will be introduced incrementally as the project evolves.
 
-## Supported Formats
+## Compression Formats
 
 | Format      | Output behavior    | Notes                                                                                                                            |
 | ----------- | ------------------ | -------------------------------------------------------------------------------------------------------------------------------- |
@@ -63,20 +63,21 @@ flowchart LR
     U[User] --> F[Next.js Web Interface]
     F -->|Image Upload| N[Next.js API Route]
     N -->|Multipart Request| API[Go Application]
-    API --> C[Image Compression]
+    API --> C[Image Compression or Resize]
     C --> API
-    API -->|Compressed Image| N
-    N -->|Compressed Image| F
+    API -->|Processed Image| N
+    N -->|Processed Image| F
     F --> U
 ```
 
-This architecture is intentionally simple. The current request lifecycle is ephemeral: uploaded and compressed images are not persisted by the backend. New components or services will only be introduced when requirements or observed limitations justify the additional complexity.
+This architecture is intentionally simple. The current request lifecycle is ephemeral: uploaded and processed images are not persisted by the backend. New components or services will only be introduced when requirements or observed limitations justify the additional complexity.
 
 For architectural decisions and trade-offs, see [Architecture](docs/en/architecture.md). For container-specific notes, see [Docker](docs/en/docker.md).
 
 ## Documentation
 
 - [Architecture](docs/en/architecture.md)
+- [Image Resize: UX, API, behavior, and limitations](docs/en/resize.md)
 - [Docker](docs/en/docker.md)
 - [ADR 001: Native Image Codecs](docs/en/adr-001-native-image-codecs.md)
 - [Arquitetura - Português](docs/pt-BR/architecture.md)
@@ -128,9 +129,9 @@ Implemented:
 
 - Image compression for JPEG/JPG, PNG, WebP, AVIF, HEIC/HEIF, GIF, BMP, and TIFF
 
-Future / considered:
+- Image resizing by pixels or percentage, with a dedicated configuration modal
 
-- Image resizing
+Future / considered:
 - Image format conversion
 - Thumbnail generation
 - Processing history

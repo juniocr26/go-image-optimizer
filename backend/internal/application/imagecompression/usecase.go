@@ -2,41 +2,32 @@ package imagecompression
 
 import (
 	"context"
-	"errors"
+	"github.com/juniorosa/go-image-optimizer/backend/internal/application/imageprocessing"
 )
 
-type Format string
+type Format = imageprocessing.Format
+type Result = imageprocessing.Result
 
 const (
-	FormatJPEG Format = "jpeg"
-	FormatPNG  Format = "png"
-	FormatWebP Format = "webp"
-	FormatAVIF Format = "avif"
-	FormatHEIF Format = "heif"
-	FormatGIF  Format = "gif"
-	FormatBMP  Format = "bmp"
-	FormatTIFF Format = "tiff"
+	FormatJPEG = imageprocessing.FormatJPEG
+	FormatPNG  = imageprocessing.FormatPNG
+	FormatWebP = imageprocessing.FormatWebP
+	FormatAVIF = imageprocessing.FormatAVIF
+	FormatHEIF = imageprocessing.FormatHEIF
+	FormatGIF  = imageprocessing.FormatGIF
+	FormatBMP  = imageprocessing.FormatBMP
+	FormatTIFF = imageprocessing.FormatTIFF
 )
 
 var (
-	ErrEmptyImage         = errors.New("image content is empty")
-	ErrUnsupportedFormat  = errors.New("unsupported image format")
-	ErrInvalidImage       = errors.New("invalid image content")
-	ErrImageTooLarge      = errors.New("image dimensions exceed the configured safety limit")
-	ErrAnimationTooLarge  = errors.New("animated image exceeds the configured frame safety limit")
-	ErrUnsupportedVariant = errors.New("unsupported image variant")
-	ErrCodecUnavailable   = errors.New("required image codec is unavailable")
+	ErrEmptyImage         = imageprocessing.ErrEmptyImage
+	ErrUnsupportedFormat  = imageprocessing.ErrUnsupportedFormat
+	ErrInvalidImage       = imageprocessing.ErrInvalidImage
+	ErrImageTooLarge      = imageprocessing.ErrImageTooLarge
+	ErrAnimationTooLarge  = imageprocessing.ErrAnimationTooLarge
+	ErrUnsupportedVariant = imageprocessing.ErrUnsupportedVariant
+	ErrCodecUnavailable   = imageprocessing.ErrCodecUnavailable
 )
-
-type Result struct {
-	Data        []byte
-	Format      Format
-	ContentType string
-	Width       int
-	Height      int
-	Animated    bool
-	FrameCount  int
-}
 
 type Compressor interface {
 	Compress(input []byte) (Result, error)

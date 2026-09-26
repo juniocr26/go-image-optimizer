@@ -1,5 +1,10 @@
 # Arquitetura
 
+## Redimensionamento (Ciclo 2)
+
+A aplicação também implementa Resize síncrono, separado em caso de uso, handler HTTP, implementação de imaging e modal de configuração próprios. Contratos de imagem, helpers HEIF e utilitários de nome de resposta são compartilhados pelas duas funcionalidades. Consulte [Resize](resize.md) para UX, contrato de API, limites, variantes excluídas e o trade-off de duas requisições para inspeção/execução. O fluxo de compressão detalhado abaixo permanece preservado.
+
+
 Este documento descreve a arquitetura atual, os trade-offs e a evolução esperada do Go Image Optimizer.
 
 O projeto evolui de forma incremental. Novos componentes e padrões só devem ser introduzidos quando um requisito concreto ou uma limitação observada justificar essa complexidade.

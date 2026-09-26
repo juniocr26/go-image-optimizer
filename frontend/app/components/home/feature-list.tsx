@@ -2,7 +2,7 @@ export function FeatureList() {
   const features = [
     {
       title: "Focused",
-      description: "Multi-format compression in the Go backend.",
+      description: "Multi-format compression and resizing in Go.",
       icon: <LightningIcon />,
     },
     {

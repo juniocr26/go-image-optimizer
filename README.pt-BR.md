@@ -4,7 +4,7 @@ Aplicação para otimização de imagens desenvolvida em Go, com uma interface w
 
 O projeto será desenvolvido de forma incremental, começando por um fluxo síncrono de compressão e evoluindo sua arquitetura conforme novos requisitos e desafios técnicos surgirem.
 
-> **Status atual:** O fluxo de compressão está implementado para JPEG/JPG, PNG, WebP, AVIF, HEIC/HEIF, GIF, BMP e TIFF.
+> **Status atual:** Compressão e redimensionamento estão implementados. Resize oferece pixels e porcentagem; consulte [comportamento e variantes suportadas](docs/pt-BR/resize.md).
 
 ## Visão geral
 
@@ -12,21 +12,21 @@ O Go Image Optimizer é um projeto de portfólio voltado ao processamento de ima
 
 Em vez de definir uma arquitetura complexa antecipadamente, o projeto segue uma abordagem incremental: começar com uma solução simples, validar os requisitos e introduzir mudanças arquiteturais quando existir uma razão concreta para isso.
 
-## Escopo inicial
+## Escopo atual
 
-A funcionalidade atual permite:
+A aplicação permite:
 
 - Enviar uma imagem pela interface web.
 - Enviar essa imagem para o backend em Go.
-- Comprimir a imagem.
-- Receber a imagem comprimida como resultado.
-- Baixar a imagem comprimida diretamente pelo navegador.
+- Comprimir a imagem ou configurar Resize por pixels/porcentagem em um modal.
+- Receber a imagem processada com informações reais do resultado.
+- Baixar o resultado diretamente pelo navegador.
 
-O backend identifica o formato real da imagem pelos bytes do arquivo, sem confiar em extensão ou MIME type informado pelo navegador. A aplicação devolve a mesma família de formato recebida, preserva dimensões e não promete que toda saída ficará menor.
+O backend identifica o formato real da imagem pelos bytes do arquivo, sem confiar em extensão ou MIME type informado pelo navegador. A aplicação devolve a mesma família de formato recebida, preserva dimensões na compressão e as altera explicitamente no Resize. Nenhuma operação promete que toda saída ficará menor.
 
 Outras funcionalidades de otimização serão adicionadas gradualmente conforme o projeto evoluir.
 
-## Formatos suportados
+## Formatos de compressão
 
 | Formato     | Saída               | Observações                                                                                                                           |
 | ----------- | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
@@ -63,14 +63,14 @@ flowchart LR
     U[Usuário] --> F[Interface Web - Next.js]
     F -->|Upload da imagem| N[Rota API do Next.js]
     N -->|Requisição multipart| API[Aplicação Go]
-    API --> C[Compressão da imagem]
+    API --> C[Compressão ou Resize]
     C --> API
-    API -->|Imagem comprimida| N
-    N -->|Imagem comprimida| F
+    API -->|Imagem processada| N
+    N -->|Imagem processada| F
     F --> U
 ```
 
-Essa arquitetura é intencionalmente simples. O ciclo de vida atual da requisição é efêmero: imagens enviadas e comprimidas não são persistidas pelo backend. Novos componentes ou serviços serão introduzidos somente quando requisitos ou limitações observadas justificarem a complexidade adicional.
+Essa arquitetura é intencionalmente simples. O ciclo de vida atual da requisição é efêmero: imagens enviadas e processadas não são persistidas pelo backend. Novos componentes ou serviços serão introduzidos somente quando requisitos ou limitações observadas justificarem a complexidade adicional.
 
 Para conhecer as decisões arquiteturais e seus trade-offs, consulte [Arquitetura](docs/pt-BR/architecture.md). Para detalhes de container, consulte [Docker](docs/pt-BR/docker.md).
 
@@ -78,6 +78,7 @@ Para conhecer as decisões arquiteturais e seus trade-offs, consulte [Arquitetur
 
 - [Architecture - English](docs/en/architecture.md)
 - [Arquitetura](docs/pt-BR/architecture.md)
+- [Resize: UX, API, comportamento e limitações](docs/pt-BR/resize.md)
 - [Docker](docs/pt-BR/docker.md)
 - [ADR 001: Codecs nativos de imagem](docs/pt-BR/adr-001-codecs-nativos.md)
 - [Test Documentation - English](TESTS_README.md)
@@ -128,9 +129,9 @@ Implementado:
 
 - Compressão de imagens JPEG/JPG, PNG, WebP, AVIF, HEIC/HEIF, GIF, BMP e TIFF
 
-Futuro / considerado:
+- Redimensionamento por pixels ou porcentagem em modal próprio
 
-- Redimensionamento
+Futuro / considerado:
 - Conversão de formatos
 - Geração de thumbnails
 - Histórico de processamentos

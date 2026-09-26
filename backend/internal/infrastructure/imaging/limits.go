@@ -3,7 +3,7 @@ package imaging
 import (
 	"image"
 
-	"github.com/juniorosa/go-image-optimizer/backend/internal/application/imagecompression"
+	"github.com/juniorosa/go-image-optimizer/backend/internal/application/imageprocessing"
 )
 
 const (
@@ -22,11 +22,11 @@ func ValidateDimensions(cfg image.Config, maxPixels int) error {
 
 func ValidateImageSize(width, height, maxPixels int) error {
 	if width <= 0 || height <= 0 {
-		return imagecompression.ErrInvalidImage
+		return imageprocessing.ErrInvalidImage
 	}
 
 	if width > maxPixels/height {
-		return imagecompression.ErrImageTooLarge
+		return imageprocessing.ErrImageTooLarge
 	}
 
 	return nil
@@ -38,11 +38,11 @@ func ValidateAnimatedDimensions(width, height, frameCount, maxPixels int) error 
 	}
 
 	if frameCount <= 0 {
-		return imagecompression.ErrInvalidImage
+		return imageprocessing.ErrInvalidImage
 	}
 
 	if width > maxPixels/height/frameCount {
-		return imagecompression.ErrAnimationTooLarge
+		return imageprocessing.ErrAnimationTooLarge
 	}
 
 	return nil

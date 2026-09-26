@@ -8,6 +8,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { ImageResizeModal } from "../image-resize/image-resize-modal";
 import { ImageDropZone } from "./image-drop-zone";
 import {
   buildCompressedFilename,
@@ -28,6 +29,7 @@ export function ImageUploadForm() {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [selectedAction, setSelectedAction] =
     useState<ImageActionId>("compress");
+  const [isResizeModalOpen, setIsResizeModalOpen] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -151,8 +153,9 @@ export function ImageUploadForm() {
       return;
     }
 
-    if (selectedAction !== "compress") {
-      setError("Choose a supported image action.");
+    if (selectedAction === "resize") {
+      setError(null);
+      setIsResizeModalOpen(true);
       return;
     }
 
@@ -210,7 +213,8 @@ export function ImageUploadForm() {
       onSubmit={handleSubmit}
     >
       <div
-        aria-hidden={isResultModalOpen ? true : undefined}
+        aria-hidden={isResultModalOpen || isResizeModalOpen ? true : undefined}
+        inert={isResultModalOpen || isResizeModalOpen ? true : undefined}
         className="grid gap-4"
       >
         <ImageDropZone
@@ -243,6 +247,20 @@ export function ImageUploadForm() {
           </div>
         ) : null}
       </div>
+
+      {isResizeModalOpen && selectedFile && previewUrl ? (
+        <ImageResizeModal
+          file={selectedFile}
+          previewUrl={previewUrl}
+          returnFocusRef={runButtonRef}
+          onClose={() => setIsResizeModalOpen(false)}
+          onComplete={(resized) => {
+            setIsResizeModalOpen(false);
+            setResult(resized);
+            setIsResultModalOpen(true);
+          }}
+        />
+      ) : null}
 
       {result ? (
         <ImageResultModal

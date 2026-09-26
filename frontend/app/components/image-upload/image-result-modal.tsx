@@ -136,7 +136,9 @@ export function ImageResultModal({
               className="text-lg font-black leading-7 text-[#066f57]"
               id={titleId}
             >
-              Compression complete
+              {result.operation === "resize"
+                ? "Resize complete"
+                : "Compression complete"}
             </h2>
             <p
               className="mt-1 truncate text-sm font-bold leading-6 text-[#344464]"
@@ -171,12 +173,27 @@ export function ImageResultModal({
             src={result.url}
           />
 
+          {result.dimensions ? (
+            <dl className="mt-4 grid grid-cols-2 gap-3 rounded-xl bg-[#f0fbf8]">
+              <ResultMetric
+                label="Original dimensions"
+                value={`${result.dimensions.originalWidth} × ${result.dimensions.originalHeight} px`}
+              />
+              <ResultMetric
+                label="Resized dimensions"
+                value={`${result.dimensions.width} × ${result.dimensions.height} px`}
+              />
+            </dl>
+          ) : null}
           <dl className="mt-4 grid gap-3 sm:grid-cols-3">
             <ResultMetric
               label="Original"
               value={formatBytes(result.originalSize)}
             />
-            <ResultMetric label="Optimized" value={formatBytes(result.size)} />
+            <ResultMetric
+              label={result.operation === "resize" ? "Resized" : "Optimized"}
+              value={formatBytes(result.size)}
+            />
             <ResultMetric
               label="Reduction"
               value={hasReduction ? `${reduction.toFixed(1)}%` : "No reduction"}
@@ -185,7 +202,9 @@ export function ImageResultModal({
 
           {!hasReduction ? (
             <p className="mt-4 rounded-xl border border-[#f6d49c] bg-[#fff9ec] px-4 py-3 text-sm font-bold text-[#875a07]">
-              The optimized file is not smaller than the original.
+              {result.operation === "resize"
+                ? "Resizing changes dimensions; the file may not be smaller."
+                : "The optimized file is not smaller than the original."}
             </p>
           ) : null}
         </div>

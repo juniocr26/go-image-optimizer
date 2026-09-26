@@ -15,7 +15,7 @@ export function HeroCopy() {
       </h1>
 
       <p className="mt-6 max-w-[520px] text-lg leading-8 tracking-normal text-[#60708d] sm:text-xl sm:leading-8">
-        Upload a supported image, compress it in the Go backend and download the
+        Upload a supported image, compress or resize it in the Go backend and download the
         optimized result without storing the image on the server.
       </p>
 
