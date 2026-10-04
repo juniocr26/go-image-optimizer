@@ -2,9 +2,9 @@
 
 Aplicação para otimização de imagens desenvolvida em Go, com uma interface web utilizando Next.js, React e Tailwind CSS.
 
-Compressão e Resize são síncronos e devolvem as imagens processadas diretamente ao navegador.
+Compressão, Resize e conversão são síncronos e devolvem as imagens processadas diretamente ao navegador. Prévias nativas contam com fallback gerado pelo servidor.
 
-> **Status atual:** Compressão e redimensionamento estão implementados. Resize oferece pixels e porcentagem; consulte [comportamento e variantes suportadas](docs/pt-BR/architecture.md#redimensionamento-de-imagens).
+> **Status atual:** Completo para o escopo funcional atual: compressão, redimensionamento, conversão de formatos e fallback de prévia compatível com navegadores. Não há funcionalidades adicionais planejadas neste momento. Manutenção e correções continuam possíveis; isso não significa prontidão para produção.
 
 ## Visão geral
 
@@ -18,13 +18,14 @@ A aplicação permite:
 
 - Enviar uma imagem pela interface web.
 - Enviar essa imagem para o backend em Go.
-- Comprimir a imagem ou configurar Resize por pixels/porcentagem em um modal.
+- Comprimir, configurar Resize por pixels/porcentagem ou converter o formato em um modal.
+- Visualizar imagens suportadas pelo navegador ou pelo fallback apenas para exibição.
 - Receber a imagem processada com informações reais do resultado.
 - Baixar o resultado diretamente pelo navegador.
 
-O backend identifica o formato real da imagem pelos bytes do arquivo, sem confiar em extensão ou MIME type informado pelo navegador. A aplicação devolve a mesma família de formato recebida, preserva dimensões na compressão e as altera explicitamente no Resize. Nenhuma operação promete que toda saída ficará menor.
+O backend identifica o formato real da imagem pelos bytes do arquivo, sem confiar em extensão ou MIME type informado pelo navegador. Compressão e Resize mantêm a família de origem. A compressão preserva dimensões orientadas, Resize as altera explicitamente e a conversão preserva dimensões orientadas ao mudar a família. Nenhuma operação garante um arquivo menor.
 
-Outras funcionalidades de otimização serão adicionadas gradualmente conforme o projeto evoluir.
+O escopo é deliberadamente focado em um portfólio Go e Next.js. Resize atende à necessidade básica de imagens menores. Operação separada de thumbnails, histórico, bancos de dados, Redis, filas, workers, persistência de imagens/object storage e editor semelhante ao Paint estão fora do escopo. O fallback de prévia é um recurso interno de exibição, não outra operação do usuário.
 
 ## Formatos de compressão
 
@@ -63,7 +64,7 @@ flowchart LR
     U[Usuário] --> F[Interface Web - Next.js]
     F -->|Upload da imagem| N[Rota API do Next.js]
     N -->|Requisição multipart| API[Aplicação Go]
-    API --> C[Compressão ou Resize]
+    API --> C[Compressão, Resize ou Conversão]
     C --> API
     API -->|Imagem processada| N
     N -->|Imagem processada| F
@@ -72,9 +73,11 @@ flowchart LR
 
 Essa arquitetura é intencionalmente simples. O ciclo de vida atual da requisição é efêmero: imagens enviadas e processadas não são persistidas pelo backend. Novos componentes ou serviços serão introduzidos somente quando requisitos ou limitações observadas justificarem a complexidade adicional.
 
-Para conhecer as decisões arquiteturais e seus trade-offs, consulte [Arquitetura](docs/pt-BR/architecture.md). Para detalhes de container, consulte [Docker](docs/pt-BR/docker.md).
+Para conhecer as decisões arquiteturais e seus trade-offs, consulte [Arquitetura](docs/pt-BR/architecture.md) e [Trade-offs](docs/pt-BR/architecture.md#trade-offs). Para detalhes de container, consulte [Docker](docs/pt-BR/docker.md).
 
 ## Documentação
+
+- [Guia de estudo para entrevista técnica](Go-Image-Optimizer-Entrevista-Tecnica.docx)
 
 - [Architecture - English](docs/en/architecture.md)
 - [Arquitetura](docs/pt-BR/architecture.md)
@@ -121,22 +124,9 @@ docker compose up --build backend frontend
 
 Consulte [Docker](docs/pt-BR/docker.md) para mais detalhes.
 
-## Roadmap
+## Conclusão do escopo
 
-O projeto será desenvolvido de forma incremental.
-
-Implementado:
-
-- Compressão de imagens JPEG/JPG, PNG, WebP, AVIF, HEIC/HEIF, GIF, BMP e TIFF
-
-- Redimensionamento por pixels ou porcentagem em modal próprio
-
-Futuro / considerado:
-- Conversão de formatos
-- Geração de thumbnails
-- Histórico de processamentos
-
-O roadmap representa a direção pretendida para o projeto e poderá mudar conforme as decisões de implementação e os requisitos técnicos evoluírem.
+Compressão, redimensionamento, conversão e fallback de prévia estão implementados. Não há roadmap de novas funcionalidades além desse escopo. Compatibilidade, dependências nativas e limites de recursos/cancelamento continuam sendo limitações técnicas documentadas. Uma evolução hipotética para produção exigiria novos requisitos e medições, sem infraestrutura adicional apenas para aumentar a complexidade do portfólio.
 
 ## Licença
 

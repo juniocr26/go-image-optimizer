@@ -117,13 +117,24 @@ docker compose run --rm backend-test
 O serviço de teste fica atrás do profile `test`, então ele não é iniciado pelo `docker compose up` normal. Para passar flags customizadas do Go test no mesmo ambiente com codecs nativos:
 
 ```bash
-docker compose run --rm backend-test go test -v ./internal/infrastructure/imaging -run TestCompressorRealFixtures
+docker compose run --rm backend-test go test -v ./internal/infrastructure/imaging/compress -run TestCompressorRealFixtures
 ```
 
-`go test -race ./...` está bloqueado no momento por uma falha de `checkptr` do Go dentro de `github.com/strukturag/libheif` durante a geração das fixtures HEIC/HEIF. A suíte normal sem `-race` é o fluxo de testes do backend suportado.
+Uma execução anteriormente documentada de `go test -race ./...` encontrou uma falha de `checkptr` do Go dentro de `github.com/strukturag/libheif` durante a geração das fixtures HEIC/HEIF. A suíte normal sem `-race` é o fluxo de testes do backend suportado.
 
 ## Diagnóstico
 
 Se a codificação HEIC/HEIF falhar com erro de codec ou plugin, confirme que a imagem de runtime inclui `libheif-x265`. Algumas distribuições Linux separam a libheif em pacotes distintos para decoder e encoder.
 
 Se a divisão de pacotes da distribuição for diferente da Alpine, instale os pacotes equivalentes de runtime libheif, decoder HEIC e encoder HEVC. `libheif-plugins-all` pode ajudar em diagnóstico, mas o Dockerfile do projeto mantém os pacotes de runtime mais restritos.
+
+
+## Verificação do escopo
+
+O mesmo serviço de testes no estágio de build cobre Compressão, Resize, conversão e fallback de prévia, incluindo HEIF nativo. Containers separados não significam microsserviços. A miniatura de prévia serve apenas à exibição; não há operação adicional de thumbnails, serviço de persistência de imagens ou worker planejado. A nota de race/checkptr acima é histórica e não foi reexecutada na conclusão.
+
+```sh
+docker compose run --rm --no-deps frontend-dev node --test tests/resize-options.test.mjs tests/conversion-size.test.mjs tests/preview-cache.test.mjs
+docker compose run --rm --no-deps frontend-dev npx tsc --noEmit
+docker compose run --rm --no-deps -e NODE_ENV=production frontend-dev npm run build
+```

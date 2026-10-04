@@ -2,9 +2,9 @@
 
 An image optimization application built with Go, with a web interface using Next.js, React, and Tailwind CSS.
 
-Compression and Resize run synchronously, returning processed images directly to the browser.
+Compression, Resize and format conversion run synchronously, returning processed images directly to the browser. Browser-native previews have a server-generated fallback.
 
-> **Current status:** Compression and Image Resize are implemented. Resize supports pixels and percentage modes; see [Resize behavior and supported variants](docs/en/architecture.md#image-resize).
+> **Current status:** Complete for the current functional scope: compression, resizing, format conversion and browser-compatible preview fallback. No additional features are planned at this time. Maintenance and bug fixes remain possible; this is not a production-readiness claim.
 
 ## Overview
 
@@ -18,13 +18,14 @@ The application allows users to:
 
 - Upload an image through the web interface.
 - Send the image to the Go backend.
-- Compress the image or configure Resize by pixels/percentage in a modal.
+- Compress the image, configure Resize by pixels/percentage, or convert its format in a modal.
+- Preview supported images natively or through a display-only backend fallback.
 - Receive the processed image with measured result information.
 - Download the result directly from the browser.
 
-The backend detects the real image format from file bytes rather than trusting extensions or browser MIME labels. The application returns the same image format family it receives, preserves dimensions during compression, and changes them explicitly during Resize. Neither operation promises every output will be smaller.
+The backend detects the real image format from file bytes rather than trusting extensions or browser MIME labels. Compression and Resize retain the source format family. Compression preserves oriented dimensions, Resize changes them explicitly, and conversion preserves oriented dimensions while changing the family. No operation guarantees a smaller file.
 
-Additional image optimization capabilities will be introduced incrementally as the project evolves.
+This is a focused Go and Next.js portfolio project. Resize covers basic smaller-image needs. A separate thumbnail operation, processing history, databases, Redis, queues, workers, persistent image/object storage and a Paint-like editor are intentionally outside the scope. The preview fallback is an internal display aid, not a separate user operation.
 
 ## Compression Formats
 
@@ -63,7 +64,7 @@ flowchart LR
     U[User] --> F[Next.js Web Interface]
     F -->|Image Upload| N[Next.js API Route]
     N -->|Multipart Request| API[Go Application]
-    API --> C[Image Compression or Resize]
+    API --> C[Compression, Resize or Conversion]
     C --> API
     API -->|Processed Image| N
     N -->|Processed Image| F
@@ -72,9 +73,11 @@ flowchart LR
 
 This architecture is intentionally simple. The current request lifecycle is ephemeral: uploaded and processed images are not persisted by the backend. New components or services will only be introduced when requirements or observed limitations justify the additional complexity.
 
-For architectural decisions and trade-offs, see [Architecture](docs/en/architecture.md). For container-specific notes, see [Docker](docs/en/docker.md).
+For architectural decisions and trade-offs, see [Architecture](docs/en/architecture.md) and [Trade-offs](docs/en/architecture.md#trade-offs). For container-specific notes, see [Docker](docs/en/docker.md).
 
 ## Documentation
+
+- [Technical interview study guide in Brazilian Portuguese](Go-Image-Optimizer-Entrevista-Tecnica.docx)
 
 - [Architecture](docs/en/architecture.md)
 - [Image Resize: UX, API, behavior, and limitations](docs/en/architecture.md#image-resize)
@@ -121,22 +124,9 @@ docker compose up --build backend frontend
 
 See [Docker](docs/en/docker.md) for details.
 
-## Roadmap
+## Scope completion
 
-The project will evolve incrementally.
-
-Implemented:
-
-- Image compression for JPEG/JPG, PNG, WebP, AVIF, HEIC/HEIF, GIF, BMP, and TIFF
-
-- Image resizing by pixels or percentage, with a dedicated configuration modal
-
-Future / considered:
-- Image format conversion
-- Thumbnail generation
-- Processing history
-
-The roadmap represents the intended direction of the project and may change as implementation decisions and technical requirements evolve.
+Compression, resizing, conversion and preview fallback are implemented. There is no feature roadmap beyond this scope. Compatibility, native dependencies and resource/cancellation limits remain documented technical limitations. Any hypothetical production evolution would require new requirements and measurements, not extra infrastructure for portfolio complexity.
 
 ## License
 

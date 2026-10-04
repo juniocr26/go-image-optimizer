@@ -117,13 +117,24 @@ docker compose run --rm backend-test
 The test service is behind the `test` profile, so it is not started by normal `docker compose up`. To pass custom Go test flags through the same native-codec environment:
 
 ```bash
-docker compose run --rm backend-test go test -v ./internal/infrastructure/imaging -run TestCompressorRealFixtures
+docker compose run --rm backend-test go test -v ./internal/infrastructure/imaging/compress -run TestCompressorRealFixtures
 ```
 
-`go test -race ./...` is currently blocked by a Go `checkptr` failure inside `github.com/strukturag/libheif` while HEIC/HEIF fixtures are encoded. The normal non-race suite is the supported backend test workflow.
+`go test -race ./...` previously encountered a Go `checkptr` failure inside `github.com/strukturag/libheif` while HEIC/HEIF fixtures are encoded. The normal non-race suite is the supported backend test workflow.
 
 ## Troubleshooting
 
 If HEIC/HEIF encoding fails with a codec or plugin error, confirm the runtime image includes `libheif-x265`. Some Linux distributions split libheif into separate decoder and encoder plugin packages.
 
 If a distribution's package split differs from Alpine, install the equivalent libheif runtime, HEIC decoder, and HEVC encoder packages. `libheif-plugins-all` can be useful for diagnostics, but the project Dockerfile keeps the runtime packages narrower.
+
+
+## Scope verification
+
+The same build-stage test service covers Compression, Resize, conversion and preview fallback, including native HEIF. Separate application containers do not imply microservices. The preview thumbnail is display-only; no additional user thumbnail operation, persistent image service or worker is planned. The race/checkptr note above is historical and was not rerun during finalization.
+
+```sh
+docker compose run --rm --no-deps frontend-dev node --test tests/resize-options.test.mjs tests/conversion-size.test.mjs tests/preview-cache.test.mjs
+docker compose run --rm --no-deps frontend-dev npx tsc --noEmit
+docker compose run --rm --no-deps -e NODE_ENV=production frontend-dev npm run build
+```

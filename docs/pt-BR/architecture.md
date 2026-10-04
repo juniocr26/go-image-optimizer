@@ -1,14 +1,14 @@
 # Arquitetura
 
-Este documento descreve a arquitetura atual, os trade-offs e a evolução esperada do Go Image Optimizer.
+Este documento descreve a arquitetura atual, os trade-offs e o escopo funcional concluído do Go Image Optimizer.
 
-O projeto evolui de forma incremental. Novos componentes e padrões só devem ser introduzidos quando um requisito concreto ou uma limitação observada justificar essa complexidade.
+O escopo funcional atual está concluído. A arquitetura permanece focada; manutenção e correções continuam possíveis, sem funcionalidades adicionais planejadas.
 
 ## 1. Contexto
 
 Go Image Optimizer é uma aplicação para otimização de imagens com backend em Go e interface web construída com Next.js, React e Tailwind CSS.
 
-A implementação atual oferece Compressão e Resize síncronos para estas famílias de formato, sujeitas às restrições de variantes de cada funcionalidade descritas abaixo:
+A implementação atual oferece Compressão, Resize e conversão síncronos, além de fallback de prévia compatível com navegadores, para estas famílias de formato, sujeitas às restrições de variantes de cada funcionalidade descritas abaixo:
 
 - JPEG / JPG
 - PNG
@@ -105,7 +105,7 @@ Por isso, um JPEG enviado como `sample.png` ainda é processado como JPEG e reto
 
 ## 5. Comportamento da compressão
 
-A aplicação preserva a família do formato de origem para imagens suportadas. Ela não faz conversão visível entre formatos não relacionados.
+A operação de compressão preserva a família de origem para imagens suportadas. A conversão de formatos é uma operação separada já implementada.
 
 Comportamento atual dos codecs:
 
@@ -183,7 +183,7 @@ As rotas de mesma origem no Next.js são `/api/images/resize/info` e `/api/image
 - **AVIF animado é rejeitado.** O decoder `gen2brain/avif` v0.6.0 fornece frames e delays, mas não preenche `LoopCount`; por isso não é possível prometer preservação de loops finitos. APNG, TIFF multipágina e HEIF multi-imagem não suportado também são rejeitados, sem achatamento silencioso.
 - Os limites compartilhados abaixo valem para inspeção e execução. Resize também limita a saída a **32 milhões de pixels** e a saída animada a **64 milhões de pixels de canvas-frame**. Descritores GIF e quantidade de frames do container WebP são verificados antes da decodificação completa.
 - Se as dimensões efetivas forem iguais às originais de exibição, os bytes originais são devolvidos intactos, preservando metadados e evitando recodificação com perda desnecessária.
-- Nos demais casos, os parâmetros de encode acompanham os padrões existentes (JPEG/WebP 82, AVIF/HEIF 60; PNG best compression; TIFF Deflate). O resultado pode ser maior em bytes. Não há lote, recorte, conversão, histórico, progresso percentual nem promessa de ganho de detalhe.
+- Nos demais casos, os parâmetros de encode acompanham os padrões existentes (JPEG/WebP 82, AVIF/HEIF 60; PNG best compression; TIFF Deflate). O resultado pode ser maior em bytes. Resize não recorta, converte formatos, processa lotes nem melhora detalhes. Conversão é outra operação; histórico e progresso percentual estão fora do escopo atual.
 
 Consulte a [documentação de testes](../../TESTS_README.pt-BR.md) para cobertura automatizada e validação da interface.
 
@@ -195,7 +195,7 @@ O ciclo de vida atual no backend é efêmero:
 Navegador
     -> POST da imagem
     -> Go recebe os bytes
-    -> Go comprime ou redimensiona os bytes
+    -> Go comprime, redimensiona ou converte os bytes
     -> Go retorna os bytes otimizados
     -> Navegador mantém o resultado temporariamente
     -> Usuário baixa o resultado
@@ -211,7 +211,7 @@ A codificação HEIC/HEIF usa internamente a API de saída para arquivo do bindi
 
 ## 7. Processamento síncrono
 
-Compressão e Resize rodam de forma síncrona dentro da requisição HTTP em Go porque a aplicação devolve um download imediato.
+Compressão, Resize, conversão e fallback de prévia rodam de forma síncrona dentro da requisição HTTP em Go porque a aplicação devolve um download imediato.
 
 A aplicação não declara características de alta vazão ou escalabilidade. Qualquer afirmação desse tipo precisa ser medida em cargas realistas antes de entrar na documentação.
 
@@ -255,27 +255,30 @@ Consulte [ADR 001: Codecs nativos de imagem](adr-001-codecs-nativos.md) e [Docke
 
 ## 11. Limitações atuais
 
-- Compressão e Resize são síncronos.
+- O processamento é síncrono; chamadas de codec podem continuar após os pontos de verificação de cancelamento.
 - Preservação de metadados é best-effort e específica por formato, não uma garantia universal.
 - Variantes não suportadas são rejeitadas em vez de aproximadas.
 - Algumas saídas podem ter o mesmo tamanho ou ficar maiores que o arquivo enviado.
 - O suporte de preview no navegador varia por formato.
-- Não há histórico, busca por ID, worker em background, fila, banco de dados, object storage ou limpeza por TTL.
+- Não há controle global de admissão de concorrência nem capacidade de produção medida.
 
-## 12. Possível evolução
+Histórico, busca por ID, bancos, Redis, filas, workers, persistência de imagens/object storage, operação separada de thumbnails e edição de imagens são exclusões deliberadas de escopo, não próximos passos planejados.
 
-FUTURO / CONSIDERADO: se requisitos futuros exigirem processamento assíncrono, arquivos maiores, formatos mais pesados, maior vazão medida, compartilhamento de resultados ou histórico, a arquitetura pode evoluir para algo como:
+## Conclusão do escopo
 
-```text
-Upload
-    -> ID de processamento
-    -> Fila / worker
-    -> Armazenamento temporário ou object storage
-    -> Recuperação do resultado
-    -> Limpeza por TTL
-```
+O escopo funcional está concluído para este projeto de portfólio. Não há funcionalidades adicionais planejadas. Resize já cria imagens menores; composição avançada de thumbnails e edição pertencem a outro escopo. Manutenção e correções continuam possíveis. Um eventual requisito de cargas assíncronas exigiria primeiro evidências sobre latência, recursos e retenção antes de decidir infraestrutura.
 
-Essa direção não está implementada hoje. Ela deve ser introduzida somente com requisitos claros e trade-offs documentados sobre armazenamento, retenção, limpeza, observabilidade, segurança e custo operacional.
+## Conversão de formatos
+
+Selecione uma imagem, escolha **Convert format** e clique em **Run** para abrir as opções. A inspeção usa os bytes reais e mostra formato e dimensões orientadas. **Convert image** processa a imagem sem alterar suas dimensões; o original continua selecionado. O resultado mostra formatos, tamanho medido, redução, aumento ou ausência de mudança, prévia com fallback e download dos bytes convertidos, mesmo quando maiores.
+
+Saídas verificadas: JPEG (JPG), PNG, WebP, AVIF, HEIC/HEIF (HEVC), GIF, BMP e TIFF. Não são algoritmos separados para aliases. O formato de origem fica desabilitado e também é rejeitado no servidor. Todas as conversões animadas são rejeitadas; não há combinação animada oferecida. APNG, sequências AVIF e TIFF/HEIF com múltiplas imagens também são rejeitados, conforme a inspeção existente.
+
+JPEG, BMP e HEIC usam fundo branco para transparência. PNG, WebP, AVIF e TIFF preservam alfa; GIF usa paleta WebSafe e transparência binária (limiar de 50%), podendo perder cores e alfa parcial. Os padrões são JPEG/WebP qualidade 82, WebP método 4/alfa 100, AVIF qualidade 60/alfa 100/velocidade 6, HEVC qualidade 60, PNG melhor compressão e TIFF Deflate com predictor. Metadados e perfis de cor não são universalmente preservados. A orientação segue o decodificador compartilhado: EXIF JPEG normalizado, AVIF autorrotacionado e transformações HEIF aplicadas pelo codec; outros formatos estáticos aplicam orientação EXIF quando reconhecida pelo leitor de metadados instalado. Não há novos codecs nativos.
+
+`POST /images/convert` (proxy `POST /api/images/convert`): multipart com exatamente um arquivo `image` e um campo `targetFormat`, cujo valor é `jpeg`, `png`, `webp`, `avif`, `heif`, `gif`, `bmp` ou `tiff`. Campos extras, duplicados e destino igual à origem retornam 400. Variantes não suportadas retornam 422. `POST /images/convert/info` (proxy `/api/images/convert/info`) aceita apenas `image` e retorna `width`, `height`, `format`, `contentType` e `frameCount`.
+
+O sucesso retorna os bytes codificados, Content-Type/Length, Content-Disposition com nome sanitizado `_converted` e extensão de destino, Cache-Control no-store e cabeçalhos X-Source-Format, X-Output-Format, X-Original-Width/Height e X-Image-Width/Height. Limites: corpo de 50 MiB, 32 milhões de pixels, 64 milhões de pixels acumulados de animação na inspeção e saída de 50 MiB. A saída é verificada após codificação; a memória temporária do encoder depende do codec. Processamento síncrono, sem persistência, com limpeza dos arquivos temporários HEIF.
 
 A conversão usa `imageconversion` para validar o destino e coordenar processamento, `imaging/convert` para codificar os pixels orientados do decodificador compartilhado do Resize e `handler/convert_image` para transporte multipart e download. O proxy Next.js encaminha formato de origem/saída e dimensões. `ImageSettingsDialog` compartilha modal, foco e comportamento de fechamento entre Resize e Convert; controles e estado continuam separados, e `ImageResultModal` apresenta ambos os resultados.
 
@@ -286,3 +289,33 @@ O upload, as configurações de Resize/Convert e todos os modais de resultado te
 O endpoint sem estado reutiliza detecção, decodificação, orientação e limites de recursos e variantes do processamento. Retorna uma miniatura proporcional limitada a 1200 × 1200, sem corte nem ampliação: PNG para transparência e JPEG para pixels opacos, com Content-Type correspondente e `Cache-Control: no-store`. O fallback aceita imagens estáticas suportadas de JPEG, PNG, WebP, AVIF, HEIC/HEIF, GIF, BMP e TIFF de página única. Animações, APNG, sequências AVIF, TIFF multipágina e variantes HEIF com múltiplas imagens não suportadas têm prévia explicitamente indisponível; RAW continua não suportado. O navegador pode exibir nativamente variantes rejeitadas pelo fallback.
 
 Carregamento, erros e **Retry preview** aparecem na área de prévia. Falhas não bloqueiam operações ou downloads. Os bytes gerados ficam em cache pela identidade do Blob durante a sessão; requisições concorrentes são compartilhadas, requisições obsoletas são canceladas quando o último consumidor sai, respostas antigas são ignoradas e URLs de exibição são revogadas. O cache guarda bytes, não URLs persistentes. Original, resultado real e bytes de exibição permanecem separados: downloads, nomes, formatos, tamanhos e dimensões descrevem os arquivos reais, nunca a miniatura. Recarregar limpa o cache.
+
+Resize/conversão/prévia verificam contexto em pontos do processamento; Compressão verifica apenas antes/depois do compressor, cuja interface não recebe contexto. Resize aceita opções de texto desconhecidas e sua inspeção não rejeita todos os campos de texto extras; inspeção/prévia de conversão rejeitam campos extras e a conversão permite apenas targetFormat. Helpers de erro/nome compartilhados não implicam políticas multipart igualmente estritas.
+
+## Trade-offs
+
+São benefícios e custos observáveis no código atual, sem inventar motivações históricas.
+
+| Decisão | Benefício | Custo ou limitação |
+| --- | --- | --- |
+| Processamento HTTP síncrono | Uma requisição retorna bytes para download; não há ciclo de vida de jobs | Codecs pesados ocupam a requisição; não há capacidade concorrente medida nem controle de admissão |
+| Requisições sem estado e inspeção separada | Não exige ID de sessão, cache de uploads nem política de retenção | Resize envia/decodifica novamente após inspeção; Execute de conversão inspeciona e Processor.Convert decodifica de novo |
+| Sem persistência de uploads/resultados ou histórico | Sem banco de imagens, object storage, Redis, fila ou worker para operar | Reload perde resultados; não há recuperação posterior nem link de compartilhamento |
+| Helpers compartilhados onde há comportamento comum | Detecção, erros, HEIF, nomes e decode de Resize são reutilizados | Compressão tem caminhos próprios; políticas de animação, metadados e encode variam entre operações |
+| Bibliotecas de codec existentes | Decode/encode real para oito famílias, incluindo HEIF | Detectar a família não significa suportar todas as variantes; comportamento de bibliotecas e ABI nativa são dependências |
+| CGO e libheif nativa | Decode/encode HEVC disponível no container | Build requer ferramentas C/headers; runtime requer libheif e plugins libde265/x265; saída usa arquivos temporários do sistema com limpeza |
+| Prévia nativa com fallback | Exibição nativa evita outra requisição quando possível; HEIC/TIFF estáticos podem ter prévia JPEG/PNG | Fallback exige upload/decode e rejeita animações; compatibilidade de exibição não preserva metadados da origem |
+| Padrões fixos de encode | Processamento previsível sem interface de ajuste de qualidade | JPEG/WebP 82 e AVIF/HEVC 60 são padrões com perda, sem garantia perceptual; recodificações sucessivas podem perder detalhes |
+| Catmull–Rom em RGBA pré-multiplicado | Reamostragem suave e menos bordas escuras ao redor do alfa | Mais trabalho que vizinho mais próximo; interpolação altera pixels, pode produzir ringing e não recupera detalhes ausentes |
+| Políticas explícitas de transparência | Conversão compõe JPEG/BMP/HEIF sobre branco; destinos compatíveis mantêm alfa | GIF usa paleta WebSafe e alfa binário a 50%; pode perder transparência parcial/cores; Resize BMP segue as restrições do encoder |
+| Normalizar orientação sem copiar metadados universalmente | Resize JPEG aplica EXIF; conversão/prévia também normalizam EXIF reconhecido em outras famílias estáticas; AVIF/HEIF aplicam transformações do codec | Recodificação não copia EXIF/XMP/ICC universalmente nem garante fidelidade de perfil de cor; apenas Resize sem mudança devolve bytes originais |
+| Restrições explícitas de variantes | Resize mantém tempos/loops de GIF/WebP suportados sem achatar; conversão/prévia rejeitam animações | Resize rejeita sequências AVIF por falta de loop exposto, APNG, TIFF multipágina e HEIF multi-imagem não suportado; compressão tem políticas diferentes |
+| Bytes medidos em vez de redução prometida | Resultados válidos maiores continuam disponíveis e são apresentados com honestidade | Mudanças de formato, cabeçalhos, paletas e parâmetros podem aumentar bytes mesmo após redução de dimensões |
+| Limites e cancelamento cooperativo | Corpo de 50 MiB, 32 milhões de pixels e 64 milhões de pixels de canvas-frame rejeitam muitas entradas grandes | Não é um teto de memória do processo; saída de 50 MiB é limite específico de conversão, após encode; chamadas nativas e escala Catmull–Rom não são interrompidas à força |
+| Escopo funcional focado | Processamento Go e interação Next.js permanecem explicáveis e revisáveis | Thumbnails separados, histórico, bancos, filas, workers, persistência e edição são exclusões deliberadas |
+
+Os timeouts de socket são 5 segundos para headers, 2 minutos para leitura/escrita e 60 segundos de inatividade (`http/server.go`). Não são um prazo de operação que encerra processamento nativo. O proxy Next.js mantém multipart e resposta em memória; verifica tamanho do arquivo após parsing. Requisições concorrentes multiplicam memória de frames decodificados; testes com fixtures limitadas não demonstram vazão segura em produção.
+
+PNG best compression e TIFF Deflate/predictor codificam sem perda os pixels recebidos. WebP estático lossless continua lossless em Compressão/Resize, mas a conversão para WebP usa o padrão com perda. Resize altera pixels mesmo com encoder lossless. O caminho multiframe de compressão AVIF não deve ser apresentado como suporte universal verificado a animações: as fixtures automatizadas são estáticas, e Resize/conversão/prévia têm políticas mais restritas.
+
+Os dois containers de aplicação separam dependências Node e Go/nativas. Isso não caracteriza um sistema de microsserviços. Manutenção pode corrigir defeitos ou compatibilidade de bibliotecas dentro do escopo concluído. Evolução para produção deve partir de requisito concreto e medições; não constitui um novo roadmap.

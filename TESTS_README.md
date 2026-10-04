@@ -4,7 +4,7 @@ This document describes the current testing strategy for Go Image Optimizer.
 
 ## Strategy
 
-The backend has automated Go tests for the application boundaries, compression and resize implementations, HTTP contracts, deterministic codec regressions, and real-file integration fixtures. The frontend has dimension-calculation regression tests using the built-in Node.js test runner, TypeScript/build checks, and manual workflow validation; no browser test framework is installed.
+The backend has automated Go tests for the application boundaries, compression, resize and conversion implementations, HTTP contracts, deterministic codec regressions, and real-file integration fixtures. The frontend has dimension-calculation, conversion size presentation and preview-cache regression tests using the built-in Node.js test runner, TypeScript/build checks, and a manual workflow checklist; no browser test framework is installed.
 
 The tests avoid a universal assertion that every optimized image must be smaller. Some real images are already optimized. Size-reduction assertions are limited to deterministic fixtures created specifically for that purpose.
 
@@ -75,7 +75,7 @@ Real integration fixtures are versioned under `storage/testdata/images`:
 - `sample.bmp`
 - `sample.tiff`
 
-These fixtures are committed test inputs, not application storage. The real-file tests read them, compress them, validate the returned bytes, and discard the compressed output in memory. Tests must not write generated files back into `storage/testdata/images`.
+These fixtures are committed test inputs, not application storage. The real-file tests read them, process Compression/Resize/conversion/preview, validate returned bytes, and discard outputs in memory. Tests must not write generated files back into `storage/testdata/images`.
 
 HEIC/HEIF tests require native libheif development libraries and the HEVC decoder/encoder plugins because both synthetic HEIC generation and real HEIC/HEIF compression use the native codec path.
 
@@ -137,7 +137,7 @@ Local HEIC/HEIF tests require native libheif development libraries and HEVC code
 Frontend TypeScript check and production build in the documented Docker environment:
 
 ```bash
-docker compose run --rm --no-deps frontend-dev node --test tests/resize-options.test.mjs
+docker compose run --rm --no-deps frontend-dev node --test tests/resize-options.test.mjs tests/conversion-size.test.mjs tests/preview-cache.test.mjs
 docker compose run --rm --no-deps frontend-dev npx tsc --noEmit
 docker compose run --rm --no-deps -e NODE_ENV=production frontend-dev npm run build
 ```
@@ -158,7 +158,7 @@ Then open the frontend, upload representative JPEG/JPG, PNG, WebP, AVIF, HEIC/HE
 - There are no visual quality assertions for JPEG output.
 - TypeScript/build checks do not verify browser interactions or certify cross-browser behavior.
 - Docker Compose validation is a smoke test, not a load or scalability test.
-- `go test -race ./...` is currently blocked by a `checkptr` failure inside `github.com/strukturag/libheif` while HEIC/HEIF fixtures are encoded; the normal non-race suite passes.
+- A previously documented `go test -race ./...` run encountered a `checkptr` failure inside `github.com/strukturag/libheif` while HEIC/HEIF fixtures are encoded; this task did not rerun race checks. Use the normal non-race workflow.
 - WebM, SVG, RAW, video, and archive formats are intentionally unsupported and are covered as unsupported-input behavior rather than codec tests.
 - No test coverage percentage is claimed.
 
@@ -167,7 +167,7 @@ Then open the frontend, upload representative JPEG/JPG, PNG, WebP, AVIF, HEIC/HE
 - Frontend calculation tests cover unchanged dimensions, enlargement from either ratio anchor, independent dimensions, all three reductions, rounding, invalid inputs, and output pixel/frame limits. They use Node.js 24 from the frontend Docker image.
 
 - Application tests cover both modes, odd-dimension rounding, minimum one pixel, width/height ratio anchors, stretching, proportional enlargement from either axis and independent enlargement, invalid parameters, output pixel/frame budgets, hostile aspect ratios, cancellation, and original-byte no-op behavior.
-- Imaging tests resize all nine real fixtures, independently decode outputs, and check dimensions, detected format, and MIME. Same-size requests are checked byte-for-byte for all nine fixtures. Synthetic tests cover JPEG EXIF orientation and rotated pixel placement, PNG/lossless WebP alpha, GIF partial frames with previous/background disposal, GIF timing/loops, WebP animation timing/loops, invalid input, pre-decode PNG pixel limits, and GIF/WebP frame budgets. Animated AVIF is explicitly rejected because the installed decoder loses loop metadata.
+- Imaging tests resize all nine real fixtures with proportional reduction/enlargement and independent reduction/enlargement (36 transformations), independently decode source/output bytes, and check dimensions, detected format, MIME and relevant alpha/frame properties. All current samples are 512 × 512; proportional outputs are 256 × 256 and 516 × 516, while unlocked cases use 256 × 128 and 515 × 519. Same-size requests are checked byte-for-byte for all nine fixtures. Synthetic tests cover JPEG EXIF orientation and rotated pixel placement, PNG/lossless WebP alpha, GIF partial frames with previous/background disposal, GIF timing/loops, WebP animation timing/loops, invalid input, pre-decode PNG pixel limits, and GIF/WebP frame budgets. Animated AVIF is explicitly rejected because the installed decoder loses loop metadata.
 - HTTP integration tests cover metadata, download headers, format/filename spoofing, default enlargement and both ratio anchors, independent dimensions, original-byte same-size responses, decoded dimensions matching headers, invalid options (including fractional/overflow/NaN values), malformed/ambiguous multipart, duplicate options, empty booleans, unsupported-variant status, upload limits, and output pixel budgets.
 - The normal `docker compose run --rm backend-test` command includes Resize and compression regression tests. Native HEIF codecs remain required. The `-race` limitation above still applies.
 
@@ -179,11 +179,38 @@ See [Resize behavior/API](docs/en/architecture.md#image-resize).
 
 ```sh
 docker compose run --rm backend-test
-docker compose run --rm --no-deps frontend-dev node --test tests/resize-options.test.mjs tests/conversion-size.test.mjs
+docker compose run --rm --no-deps frontend-dev node --test tests/resize-options.test.mjs tests/conversion-size.test.mjs tests/preview-cache.test.mjs
 docker compose run --rm --no-deps frontend-dev npx tsc --noEmit
 docker compose run --rm --no-deps -e NODE_ENV=production frontend-dev npm run build
 ```
 
-Tests cover output families and decoding, alpha/white compositing, EXIF orientation, animation rejection, cancellation, HTTP headers, duplicates and larger output. Existing tests cover shared decoder limits/variants and Compression/Resize regressions. Manual browser verification should cover desktop/mobile, Tab/Shift+Tab/Escape, loading/retry, preserving the target on error, preview fallback and download; it was not performed in this session.
+Tests cover output families and decoding, alpha/white compositing, EXIF orientation, animation rejection, cancellation, HTTP headers, duplicates and larger output. Existing tests cover shared decoder limits/variants and Compression/Resize regressions. Manual browser verification should cover desktop/mobile, Tab/Shift+Tab/Escape, loading/retry, preserving the target on error, preview fallback and download; these are checklist items, not executed browser checks.
 
-Preview regression tests cover real format fixtures, MIME and independent decoding, thumbnail bounds, alpha, orientation, invalid input, variant and pixel/upload limits, multipart validation, source-byte preservation, result-Blob uploads, cache reuse/retry and request cancellation. Run frontend tests with `node --test tests/*.test.mjs` in the documented frontend-dev container. Browser interaction verification was not performed.
+Preview regression tests cover real format fixtures, MIME and independent decoding, thumbnail bounds, alpha, orientation, invalid input, variant and pixel/upload limits, multipart validation, source-byte preservation, result-Blob uploads, cache reuse/retry and request cancellation. Run frontend tests with `node --test tests/*.test.mjs` in the documented frontend-dev container. Browser interaction verification was not performed during scope finalization.
+
+
+## Real-sample conversion matrix
+
+`imaging/convert/real_fixtures_test.go` tests each of the nine physical source files against the eight canonical destinations (`jpeg`, `png`, `webp`, `avif`, `heif`, `gif`, `bmp`, `tiff`). This is 72 named cases: 63 successful conversions and nine expected same-family errors. JPG is a filename/UI alias; `targetFormat=jpg` is rejected. Both HEIC and HEIF files map to the `heif` family and reject that destination. The test fails when the fixture inventory changes without an explicit policy.
+
+All nine physical samples are currently static 512 × 512 images. Codec-level decoding checks bytes and oriented dimensions independently of the processing Decoder. Tests check detected family, MIME, result/source metadata, one-frame output and source-byte preservation. Fully transparent pixels, when present, exercise alpha preservation or white compositing; deterministic synthetic fixtures additionally verify transparency, partial alpha and EXIF orientation. No conversion case asserts universal byte reduction.
+
+Synthetic variant tests assert animation, APNG, AVIF sequence (through the shared Resize decoder) and multipage TIFF rejection. The real matrix does not establish support for arbitrary variants. HTTP tests use tiny deterministic images for all destination MIME types, extensions, safe filenames, dimensions, no-store and Content-Length matching actual body bytes; they do not repeat the expensive real-file matrix. Frontend tests cover reduction, increase and no-change presentation.
+
+## Scope finalization verification on 2026-10-04
+
+Executed successfully in the documented Docker environment:
+
+```sh
+docker compose run --rm backend-test
+docker compose run --rm backend-test sh -c 'gofmt -w internal/infrastructure/imaging/resize/resize_test.go internal/infrastructure/imaging/convert/real_fixtures_test.go && go test -v ./internal/infrastructure/imaging/resize ./internal/infrastructure/imaging/convert'
+docker compose run --rm backend-test sh -c 'gofmt -w internal/infrastructure/http/conversion_test.go internal/infrastructure/imaging/resize/resize_test.go && go test ./...'
+docker compose run --rm backend-test sh -c 'gofmt -w internal/infrastructure/imaging/convert/processor_test.go && go test -count=1 ./...'
+docker compose run --rm --no-deps frontend-dev node --test tests/resize-options.test.mjs tests/conversion-size.test.mjs tests/preview-cache.test.mjs
+docker compose run --rm --no-deps frontend-dev npx tsc --noEmit
+docker compose run --rm --no-deps -e NODE_ENV=production frontend-dev npm run build
+```
+
+The first backend run established the baseline; the final full suite includes the extended samples and destination-header checks. All 12 frontend tests passed. These checks demonstrate automated behavior in this environment, not browser interaction, visual fidelity, race safety, benchmarks or production capacity. No browser, race or load check was performed. Outputs stayed in memory; production HEIF temporary files are removed by the shared helper. Original fixture bytes were checked against Git and remained unchanged.
+
+The DOCX guide was structurally checked (XML, heading styles, 32 answers, two tables and page field). Rendering with the packaged skill script failed because `pdf2image` is unavailable; this session does not expose the bundled document/LibreOffice runtime. Page layout remains visually unverified.

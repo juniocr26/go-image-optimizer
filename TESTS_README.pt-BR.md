@@ -4,7 +4,7 @@ Este documento descreve a estratégia atual de testes do Go Image Optimizer.
 
 ## Estratégia
 
-O backend possui testes automatizados em Go para a fronteiras de aplicação, as implementações de compressão e resize, os contratos HTTP, regressões determinísticas de codec e fixtures reais de integração. O frontend tem testes de regressão do cálculo de dimensões usando o runner nativo do Node.js, verificações TypeScript/build e validação manual do fluxo; não há framework de testes de navegador instalado.
+O backend possui testes automatizados em Go para as fronteiras de aplicação, as implementações de compressão, resize e conversão, os contratos HTTP, regressões determinísticas de codec e fixtures reais de integração. O frontend tem testes de cálculo de dimensões, apresentação de tamanhos da conversão e cache de prévia usando o runner nativo do Node.js, verificações TypeScript/build e checklist manual do fluxo; não há framework de testes de navegador instalado.
 
 Os testes evitam afirmar que toda imagem otimizada precisa ficar menor. Algumas imagens reais já chegam otimizadas. As asserções de redução de tamanho ficam limitadas a fixtures determinísticas criadas especificamente para esse caso.
 
@@ -137,7 +137,7 @@ Testes locais de HEIC/HEIF exigem bibliotecas de desenvolvimento nativas da libh
 Verificação TypeScript e build de produção no ambiente Docker documentado:
 
 ```bash
-docker compose run --rm --no-deps frontend-dev node --test tests/resize-options.test.mjs
+docker compose run --rm --no-deps frontend-dev node --test tests/resize-options.test.mjs tests/conversion-size.test.mjs tests/preview-cache.test.mjs
 docker compose run --rm --no-deps frontend-dev npx tsc --noEmit
 docker compose run --rm --no-deps -e NODE_ENV=production frontend-dev npm run build
 ```
@@ -158,7 +158,7 @@ Depois, abra o frontend, envie amostras representativas de JPEG/JPG, PNG, WebP, 
 - Não há asserções visuais de qualidade para a saída JPEG.
 - TypeScript/build não verificam interações no navegador nem certificam compatibilidade entre navegadores.
 - A validação com Docker Compose é um smoke test, não um teste de carga ou escalabilidade.
-- `go test -race ./...` está bloqueado no momento por uma falha de `checkptr` dentro de `github.com/strukturag/libheif` durante a geração das fixtures HEIC/HEIF; a suíte normal sem `-race` passa.
+- Uma execução anteriormente documentada de `go test -race ./...` encontrou falha de `checkptr` dentro de `github.com/strukturag/libheif` durante a geração das fixtures HEIC/HEIF. O race detector não foi reexecutado nesta tarefa; o fluxo recomendado usa a suíte normal.
 - WebM, SVG, RAW, vídeo e arquivos compactados são intencionalmente não suportados e entram na cobertura como comportamento de entrada não suportada, não como testes de codec.
 - Nenhum percentual de cobertura é declarado.
 
@@ -179,11 +179,42 @@ Consulte [comportamento/API do Resize](docs/pt-BR/architecture.md#redimensioname
 
 ```sh
 docker compose run --rm backend-test
-docker compose run --rm --no-deps frontend-dev node --test tests/resize-options.test.mjs tests/conversion-size.test.mjs
+docker compose run --rm --no-deps frontend-dev node --test tests/resize-options.test.mjs tests/conversion-size.test.mjs tests/preview-cache.test.mjs
 docker compose run --rm --no-deps frontend-dev npx tsc --noEmit
 docker compose run --rm --no-deps -e NODE_ENV=production frontend-dev npm run build
 ```
 
-Os testes cobrem famílias de saída, decodificação, alfa/fundo branco, orientação EXIF, rejeição de animação, cancelamento, contrato HTTP, duplicatas e saída maior. Os testes existentes continuam cobrindo limites e variantes do decodificador compartilhado e regressões de compressão/resize. A verificação manual no navegador deve cobrir desktop/mobile, Tab/Shift+Tab/Escape, loading/retry, erro com destino preservado, fallback de prévia e download; não foi executada nesta sessão.
+Os testes cobrem famílias de saída, decodificação, alfa/fundo branco, orientação EXIF, rejeição de animação, cancelamento, contrato HTTP, duplicatas e saída maior. Os testes existentes continuam cobrindo limites e variantes do decodificador compartilhado e regressões de compressão/resize. A verificação manual no navegador deve cobrir desktop/mobile, Tab/Shift+Tab/Escape, loading/retry, erro com destino preservado, fallback de prévia e download; não foi executada durante a conclusão do escopo.
 
 Os testes de prévia cobrem fixtures reais, MIME e decodificação independente, limites da miniatura, alpha, orientação, entradas inválidas, limites de pixels/upload e variantes, validação multipart, preservação da origem, envio do Blob de resultado, cache/retry e cancelamento. Execute `node --test tests/*.test.mjs` no container frontend-dev documentado. A verificação de interação no navegador não foi realizada.
+
+
+## Matriz de conversão com amostras reais
+
+`imaging/convert/real_fixtures_test.go` testa cada um dos nove arquivos físicos contra oito destinos canônicos (`jpeg`, `png`, `webp`, `avif`, `heif`, `gif`, `bmp`, `tiff`). São 72 casos nomeados: 63 conversões válidas e nove erros esperados de mesma família. JPG é alias de extensão/interface; `targetFormat=jpg` é rejeitado. HEIC e HEIF representam a família `heif` e rejeitam esse destino. Alterar o inventário sem definir uma política faz o teste falhar.
+
+As nove amostras físicas atuais são estáticas, com 512 × 512 pixels. Decode direto pelos codecs verifica bytes e dimensões orientadas independentemente do Decoder de processamento. Os testes verificam família detectada, MIME, informações de origem/resultado, saída de um frame e bytes de origem intactos. Pixels totalmente transparentes, quando presentes, exercitam preservação de alfa ou composição branca; fixtures sintéticas determinísticas também verificam transparência, alfa parcial e orientação EXIF. Nenhuma conversão exige redução universal de bytes.
+
+Os testes sintéticos verificam rejeição de animações, APNG, sequências AVIF pelo decoder compartilhado de Resize e TIFF multipágina. A matriz real não prova suporte a variantes arbitrárias. Testes HTTP usam imagens sintéticas pequenas para verificar MIME, extensões, nomes seguros, dimensões, no-store e Content-Length igual ao corpo para todos os destinos, sem repetir a matriz cara. Testes de frontend verificam redução, aumento e ausência de mudança de tamanho.
+
+## Resize com amostras reais
+
+O teste existente foi ampliado, sem duplicação: cada uma das nove amostras passa por redução/ampliação proporcionais e redução/ampliação com proporção destravada, totalizando 36 transformações. Origem e resultado são decodificados para conferir dimensões, família, MIME e propriedades relevantes de alfa/frames. Como todas são quadradas, a redução independente usa saída 256 × 128 e a ampliação 515 × 519; a ampliação proporcional usa 516 × 516. A redução proporcional produz 256 × 256. Os nove casos sem mudança continuam verificando igualdade dos bytes. Orientação, transparência parcial, tempos/loops e variantes rejeitadas mantêm testes sintéticos próprios.
+
+## Verificação da conclusão do escopo em 04 de outubro de 2026
+
+Executados com sucesso no ambiente Docker documentado:
+
+```sh
+docker compose run --rm backend-test
+docker compose run --rm backend-test sh -c 'gofmt -w internal/infrastructure/imaging/resize/resize_test.go internal/infrastructure/imaging/convert/real_fixtures_test.go && go test -v ./internal/infrastructure/imaging/resize ./internal/infrastructure/imaging/convert'
+docker compose run --rm backend-test sh -c 'gofmt -w internal/infrastructure/http/conversion_test.go internal/infrastructure/imaging/resize/resize_test.go && go test ./...'
+docker compose run --rm backend-test sh -c 'gofmt -w internal/infrastructure/imaging/convert/processor_test.go && go test -count=1 ./...'
+docker compose run --rm --no-deps frontend-dev node --test tests/resize-options.test.mjs tests/conversion-size.test.mjs tests/preview-cache.test.mjs
+docker compose run --rm --no-deps frontend-dev npx tsc --noEmit
+docker compose run --rm --no-deps -e NODE_ENV=production frontend-dev npm run build
+```
+
+A primeira execução estabeleceu a base; a suíte completa final inclui amostras ampliadas e headers de todos os destinos. Os 12 testes de frontend passaram. São verificações automatizadas neste ambiente, não interação de navegador, fidelidade visual, segurança com race detector, benchmarks ou capacidade de produção. Não foram executados testes de navegador, race ou carga. A falha de checkptr/libheif descrita anteriormente é um registro anterior, não uma nova execução desta tarefa. Resultados ficaram em memória; arquivos temporários HEIF são removidos pelo helper compartilhado. Os bytes originais das fixtures foram comparados ao Git e permaneceram intactos.
+
+O guia DOCX foi validado estruturalmente (XML, estilos de título, 32 respostas, duas tabelas e campo de página). A tentativa de renderização pelo script da skill falhou por falta de `pdf2image`; o runtime empacotado de documentos/LibreOffice não está disponível nesta sessão. A paginação e o layout visual do guia permanecem sem inspeção.

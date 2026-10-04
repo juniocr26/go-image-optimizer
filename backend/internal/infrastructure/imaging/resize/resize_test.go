@@ -11,8 +11,10 @@ import (
 	"image/gif"
 	"image/jpeg"
 	"image/png"
+	"math"
 	"os"
 	"path/filepath"
+	"reflect"
 	"testing"
 	"time"
 
@@ -40,36 +42,118 @@ func TestResizeRealFixtures(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
+			var original image.Image
+			if ext == "heic" || ext == "heif" {
+				original, err = imaging.DecodeHEIF(input, imageresize.MaxPixels)
+			} else if ext == "avif" {
+				original, err = avif.Decode(bytes.NewReader(input), avif.Options{AutoRotate: true})
+			} else {
+				original, _, err = image.Decode(bytes.NewReader(input))
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			if ext == "jpg" {
+				original = imaging.ApplyOrientation(original, imaging.ReadEXIFOrientation(input))
+			}
+			if original.Bounds().Dx() != info.Width || original.Bounds().Dy() != info.Height {
+				t.Fatal("inspection disagrees with independently decoded source")
+			}
 			unchanged, err := uc.Execute(context.Background(), input, imageresize.Options{Mode: "pixels", Width: info.Width, Height: info.Height, Axis: "width"})
 			if err != nil || !bytes.Equal(unchanged.Data, input) {
 				t.Fatalf("same-size input must retain encoded bytes: %v", err)
 			}
-			out, err := uc.Execute(context.Background(), input, imageresize.Options{Mode: "percentage", Reduction: 50})
-			if err != nil {
-				t.Fatal(err)
+			// Expected targets are calculated independently of imageresize.Target.
+			// Enlargement adds only a few pixels, keeping native codec work modest.
+			upW := info.Width + 4
+			upH := max(1, int(math.Round(float64(info.Height)*float64(upW)/float64(info.Width))))
+			downW, downH := max(1, (info.Width+1)/2), max(1, (info.Height+1)/2)
+			// Square reduction distorts a non-square input; square inputs use 1:2.
+			side := max(1, min(info.Width, info.Height)/2)
+			stretchW, stretchH := side, side
+			if info.Width == info.Height {
+				stretchH = max(1, side/2)
 			}
-			w, h := max(1, (info.Width+1)/2), max(1, (info.Height+1)/2)
-			if out.Width != w || out.Height != h || out.OriginalWidth != info.Width || out.OriginalHeight != info.Height || out.Format != info.Format || len(out.Data) == 0 {
-				t.Fatalf("bad resize result: %dx%d", out.Width, out.Height)
+			tests := []struct {
+				name          string
+				options       imageresize.Options
+				width, height int
+			}{
+				{"proportional reduction", imageresize.Options{Mode: "percentage", Reduction: 50}, downW, downH},
+				{"proportional enlargement", imageresize.Options{Mode: "pixels", Width: upW, Height: 1, KeepAspectRatio: true, Axis: "width"}, upW, upH},
+				{"independent reduction square or non-square", imageresize.Options{Mode: "pixels", Width: stretchW, Height: stretchH, Axis: "width"}, stretchW, stretchH},
+				{"independent enlargement unequal scales", imageresize.Options{Mode: "pixels", Width: info.Width + 3, Height: info.Height + 7, Axis: "height"}, info.Width + 3, info.Height + 7},
 			}
-			detected, err := imaging.DetectFormat(out.Data)
-			if err != nil || detected.Format != info.Format || detected.ContentType != out.ContentType {
-				t.Fatalf("format/MIME: %+v %v", detected, err)
+			for _, tt := range tests {
+				t.Run(tt.name, func(t *testing.T) {
+					out, err := uc.Execute(context.Background(), input, tt.options)
+					if err != nil {
+						t.Fatal(err)
+					}
+					w, h := tt.width, tt.height
+					if out.Width != w || out.Height != h || out.OriginalWidth != info.Width || out.OriginalHeight != info.Height || out.Format != info.Format || len(out.Data) == 0 {
+						t.Fatalf("bad resize result: %+v", out.Result)
+					}
+					detected, err := imaging.DetectFormat(out.Data)
+					if err != nil || detected.Format != info.Format || detected.ContentType != out.ContentType {
+						t.Fatalf("format/MIME: %+v %v", detected, err)
+					}
+					var decoded image.Image
+					if ext == "heic" || ext == "heif" {
+						decoded, err = imaging.DecodeHEIF(out.Data, imageresize.MaxPixels)
+					} else if ext == "avif" {
+						decoded, err = avif.Decode(bytes.NewReader(out.Data), avif.Options{AutoRotate: true})
+					} else {
+						decoded, _, err = image.Decode(bytes.NewReader(out.Data))
+					}
+					if err != nil {
+						t.Fatal(err)
+					}
+					if decoded.Bounds().Dx() != w || decoded.Bounds().Dy() != h {
+						t.Fatalf("actual output: %v want %dx%d", decoded.Bounds(), w, h)
+					}
+					if ext == "png" || ext == "webp" || ext == "avif" || ext == "tiff" {
+						if opaque, ok := original.(interface{ Opaque() bool }); ok && !opaque.Opaque() {
+							if output, ok := decoded.(interface{ Opaque() bool }); ok && output.Opaque() {
+								t.Fatal("source transparency became entirely opaque")
+							}
+						}
+					}
+					if out.FrameCount != info.FrameCount || out.Animated != (info.FrameCount > 1) {
+						t.Fatal("changed animation properties")
+					}
+					if ext == "gif" {
+						before, err := gif.DecodeAll(bytes.NewReader(input))
+						if err != nil {
+							t.Fatal(err)
+						}
+						after, err := gif.DecodeAll(bytes.NewReader(out.Data))
+						if err != nil {
+							t.Fatal(err)
+						}
+						if len(after.Image) != len(before.Image) || after.LoopCount != before.LoopCount || !reflect.DeepEqual(after.Delay, before.Delay) {
+							t.Fatal("GIF frames, delays or loops changed")
+						}
+					}
+					if ext == "webp" {
+						before, err := webp.GetFeatures(bytes.NewReader(input))
+						if err != nil {
+							t.Fatal(err)
+						}
+						after, err := webp.GetFeatures(bytes.NewReader(out.Data))
+						if err != nil {
+							t.Fatal(err)
+						}
+						if before.HasAlpha && !after.HasAlpha {
+							t.Fatal("WebP alpha lost")
+						}
+						if before.HasAnimation != after.HasAnimation || before.LoopCount != after.LoopCount || max(1, before.FrameCount) != max(1, after.FrameCount) {
+							t.Fatal("WebP animation changed")
+						}
+					}
+				})
 			}
-			var decoded image.Image
-			if ext == "heic" || ext == "heif" {
-				decoded, err = imaging.DecodeHEIF(out.Data, imageresize.MaxPixels)
-			} else if ext == "avif" {
-				decoded, err = avif.Decode(bytes.NewReader(out.Data), avif.Options{AutoRotate: true})
-			} else {
-				decoded, _, err = image.Decode(bytes.NewReader(out.Data))
-			}
-			if err != nil {
-				t.Fatal(err)
-			}
-			if decoded.Bounds().Dx() != w || decoded.Bounds().Dy() != h {
-				t.Fatalf("actual output: %v want %dx%d", decoded.Bounds(), w, h)
-			}
+
 		})
 	}
 }

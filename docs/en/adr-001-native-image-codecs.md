@@ -39,3 +39,8 @@ Trade-offs:
 - The libheif Go binding writes encoded output through a temporary file API, so the compressor creates and immediately removes an OS temporary file for HEIC/HEIF output.
 
 The decision should be revisited if future requirements demand a fully static runtime, broader HEIF variant support, GPU/native service offload, or asynchronous high-throughput processing.
+
+
+## Current scope note
+
+This ADR records the native-codec decision; its hypothetical reconsideration criteria are not a roadmap. The current application implements Compression, Resize, conversion and preview fallback. Shared HEIF helpers serve those operations; no durable storage or asynchronous infrastructure is planned. See [current architecture and trade-offs](architecture.md#trade-offs).

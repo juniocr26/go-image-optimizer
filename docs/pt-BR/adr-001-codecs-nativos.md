@@ -39,3 +39,8 @@ Trade-offs:
 - O binding Go da libheif escreve a saída codificada por uma API de arquivo temporário, então o compressor cria e remove imediatamente um arquivo temporário do sistema operacional para a saída HEIC/HEIF.
 
 A decisão deve ser revisitada se requisitos futuros exigirem runtime totalmente estático, suporte mais amplo a variantes HEIF, offload para serviço nativo/GPU ou processamento assíncrono de alta vazão.
+
+
+## Nota sobre o escopo atual
+
+Este ADR registra a decisão de codec nativo; os critérios hipotéticos de reavaliação não constituem roadmap. A aplicação atual implementa Compressão, Resize, conversão e fallback de prévia. Os helpers HEIF atendem a essas operações; não há persistência nem infraestrutura assíncrona planejada. Consulte a [arquitetura atual e seus trade-offs](architecture.md#trade-offs).

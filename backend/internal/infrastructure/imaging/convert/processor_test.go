@@ -61,6 +61,15 @@ func TestTargets(t *testing.T) {
 			} else if a > 1000 {
 				t.Fatalf("alpha lost: %d", a)
 			}
+			_, _, _, partial := pixels.At(1, 1).RGBA()
+			if target == "webp" || target == "avif" || target == "tiff" {
+				if partial < 32000 || partial > 34000 {
+					t.Fatalf("partial alpha lost: %d", partial)
+				}
+			} else if partial != 65535 {
+				t.Fatalf("opaque/binary destination alpha: %d", partial)
+			}
+
 		})
 	}
 	// A JPEG source exercises PNG output and confirms a larger output is retained.
@@ -72,6 +81,24 @@ func TestTargets(t *testing.T) {
 	if err != nil || len(pngResult.Data) == 0 || pngResult.Format != "png" {
 		t.Fatalf("PNG: %v", err)
 	}
+	// PNG cannot be its own destination: use an alpha-capable TIFF source.
+	tiffResult, err := uc.Execute(context.Background(), input, "tiff")
+	if err != nil {
+		t.Fatal(err)
+	}
+	alphaPNG, err := uc.Execute(context.Background(), tiffResult.Data, "png")
+	if err != nil {
+		t.Fatal(err)
+	}
+	pixels, err := png.Decode(bytes.NewReader(alphaPNG.Data))
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, _, _, alpha := pixels.At(1, 1).RGBA()
+	if alpha < 32000 || alpha > 34000 {
+		t.Fatalf("PNG partial alpha lost: %d", alpha)
+	}
+
 }
 func TestRejections(t *testing.T) {
 	uc := imageconversion.NewUseCase(Processor{})
