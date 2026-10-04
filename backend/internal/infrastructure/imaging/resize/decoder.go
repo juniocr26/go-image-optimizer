@@ -22,6 +22,7 @@ import (
 type Decoder struct{}
 
 type source struct {
+	pixels image.Image
 	info   imageresize.Info
 	encode func(context.Context, int, int) ([]byte, error)
 }
@@ -87,7 +88,7 @@ func (Decoder) Decode(input []byte) (imageresize.Source, error) {
 
 func staticSource(img image.Image, detected imaging.DetectedFormat, lossless bool) source {
 	return source{
-		info: infoFor(img, detected, 1),
+		pixels: img, info: infoFor(img, detected, 1),
 		encode: func(ctx context.Context, w, h int) ([]byte, error) {
 			resized := scaleImage(img, w, h)
 			if err := ctx.Err(); err != nil {
@@ -152,7 +153,7 @@ func decodeAVIF(input []byte, detected imaging.DetectedFormat) (imageresize.Sour
 		return nil, imageprocessing.ErrUnsupportedVariant
 	}
 	img := anim.Image[0]
-	return source{info: infoFor(img, detected, 1), encode: func(ctx context.Context, w, h int) ([]byte, error) {
+	return source{pixels: img, info: infoFor(img, detected, 1), encode: func(ctx context.Context, w, h int) ([]byte, error) {
 		resized := scaleImage(img, w, h)
 		if err := ctx.Err(); err != nil {
 			return nil, err
@@ -162,3 +163,6 @@ func decodeAVIF(input []byte, detected imaging.DetectedFormat) (imageresize.Sour
 		return output.Bytes(), err
 	}}, nil
 }
+
+// Pixels exposes oriented static pixels for other operations without re-decoding.
+func (s source) Pixels() image.Image { return s.pixels }

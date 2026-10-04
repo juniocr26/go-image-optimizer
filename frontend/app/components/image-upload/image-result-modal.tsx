@@ -1,4 +1,5 @@
 import { type RefObject, useEffect, useId, useRef } from "react";
+import { conversionSizeChange } from "../image-convert/size-change";
 import { createPortal } from "react-dom";
 import { BrowserImagePreview } from "./browser-image-preview";
 import { formatBytes } from "./image-file";
@@ -28,6 +29,7 @@ export function ImageResultModal({
   const descriptionId = useId();
   const reduction =
     ((result.originalSize - result.size) / result.originalSize) * 100;
+  const sizeChange = conversionSizeChange(result.originalSize, result.size);
   const hasReduction = result.size < result.originalSize;
 
   useEffect(() => {
@@ -136,7 +138,7 @@ export function ImageResultModal({
               className="text-lg font-black leading-7 text-[#066f57]"
               id={titleId}
             >
-              {result.operation === "resize"
+              {result.operation === "convert" ? "Conversion complete" : result.operation === "resize"
                 ? "Resize complete"
                 : "Compression complete"}
             </h2>
@@ -173,6 +175,7 @@ export function ImageResultModal({
             src={result.url}
           />
 
+          {result.operation === "convert" ? <dl className="mt-4 grid grid-cols-2 gap-3"><ResultMetric label="Original format" value={result.sourceFormat?.toUpperCase() ?? "—"} /><ResultMetric label="Converted format" value={result.outputFormat?.toUpperCase() ?? "—"} /></dl> : null}
           {result.dimensions ? (
             <dl className="mt-4 grid grid-cols-2 gap-3 rounded-xl bg-[#f0fbf8]">
               <ResultMetric
@@ -180,7 +183,7 @@ export function ImageResultModal({
                 value={`${result.dimensions.originalWidth} × ${result.dimensions.originalHeight} px`}
               />
               <ResultMetric
-                label="Resized dimensions"
+                label={result.operation === "convert" ? "Converted dimensions" : "Resized dimensions"}
                 value={`${result.dimensions.width} × ${result.dimensions.height} px`}
               />
             </dl>
@@ -191,18 +194,18 @@ export function ImageResultModal({
               value={formatBytes(result.originalSize)}
             />
             <ResultMetric
-              label={result.operation === "resize" ? "Resized" : "Optimized"}
+              label={result.operation === "convert" ? "Converted" : result.operation === "resize" ? "Resized" : "Optimized"}
               value={formatBytes(result.size)}
             />
             <ResultMetric
-              label="Reduction"
-              value={hasReduction ? `${reduction.toFixed(1)}%` : "No reduction"}
+              label={result.operation === "convert" ? sizeChange.label : "Reduction"}
+              value={result.operation === "convert" ? sizeChange.value : hasReduction ? `${reduction.toFixed(1)}%` : "No reduction"}
             />
           </dl>
 
           {!hasReduction ? (
             <p className="mt-4 rounded-xl border border-[#f6d49c] bg-[#fff9ec] px-4 py-3 text-sm font-bold text-[#875a07]">
-              {result.operation === "resize"
+              {result.operation === "convert" ? "Format conversion does not guarantee a smaller file." : result.operation === "resize"
                 ? "Resizing changes dimensions; the file may not be smaller."
                 : "The optimized file is not smaller than the original."}
             </p>

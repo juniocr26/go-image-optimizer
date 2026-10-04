@@ -48,6 +48,8 @@ export async function forwardImageRequest(request: Request, path: string) {
 
     headers.set("Cache-Control", "no-store");
     for (const name of [
+      "X-Source-Format",
+      "X-Output-Format",
       "X-Image-Width",
       "X-Image-Height",
       "X-Original-Width",

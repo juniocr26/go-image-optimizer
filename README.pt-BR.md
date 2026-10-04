@@ -141,3 +141,15 @@ O roadmap representa a direção pretendida para o projeto e poderá mudar confo
 ## Licença
 
 Este projeto é licenciado sob a MIT License. Consulte o arquivo `LICENSE` para mais detalhes.
+
+## Conversão de formatos
+
+Selecione uma imagem, escolha **Convert format** e clique em **Run** para abrir as opções. A inspeção usa os bytes reais e mostra formato e dimensões orientadas. **Convert image** processa a imagem sem alterar suas dimensões; o original continua selecionado. O resultado mostra formatos, tamanho medido, redução, aumento ou ausência de mudança, prévia com fallback e download dos bytes convertidos, mesmo quando maiores.
+
+Saídas verificadas: JPEG (JPG), PNG, WebP, AVIF, HEIC/HEIF (HEVC), GIF, BMP e TIFF. Não são algoritmos separados para aliases. O formato de origem fica desabilitado e também é rejeitado no servidor. Todas as conversões animadas são rejeitadas; não há combinação animada oferecida. APNG, sequências AVIF e TIFF/HEIF com múltiplas imagens também são rejeitados, conforme a inspeção existente.
+
+JPEG, BMP e HEIC usam fundo branco para transparência. PNG, WebP, AVIF e TIFF preservam alfa; GIF usa paleta WebSafe e transparência binária (limiar de 50%), podendo perder cores e alfa parcial. Os padrões são JPEG/WebP qualidade 82, WebP método 4/alfa 100, AVIF qualidade 60/alfa 100/velocidade 6, HEVC qualidade 60, PNG melhor compressão e TIFF Deflate com predictor. Metadados e perfis de cor não são universalmente preservados. A orientação segue o decodificador compartilhado: EXIF JPEG normalizado, AVIF autorrotacionado e transformações HEIF aplicadas pelo codec; outros formatos estáticos aplicam orientação EXIF quando reconhecida pelo leitor de metadados instalado. Não há novos codecs nativos.
+
+`POST /images/convert` (proxy `POST /api/images/convert`): multipart com exatamente um arquivo `image` e um campo `targetFormat`, cujo valor é `jpeg`, `png`, `webp`, `avif`, `heif`, `gif`, `bmp` ou `tiff`. Campos extras, duplicados e destino igual à origem retornam 400. Variantes não suportadas retornam 422. `POST /images/convert/info` (proxy `/api/images/convert/info`) aceita apenas `image` e retorna `width`, `height`, `format`, `contentType` e `frameCount`.
+
+O sucesso retorna os bytes codificados, Content-Type/Length, Content-Disposition com nome sanitizado `_converted` e extensão de destino, Cache-Control no-store e cabeçalhos X-Source-Format, X-Output-Format, X-Original-Width/Height e X-Image-Width/Height. Limites: corpo de 50 MiB, 32 milhões de pixels, 64 milhões de pixels acumulados de animação na inspeção e saída de 50 MiB. A saída é verificada após codificação; a memória temporária do encoder depende do codec. Processamento síncrono, sem persistência, com limpeza dos arquivos temporários HEIF.

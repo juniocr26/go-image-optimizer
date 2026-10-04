@@ -91,7 +91,13 @@ func decodeGIF(input []byte, detected imaging.DetectedFormat) (imageresize.Sourc
 		return nil, imageprocessing.ErrInvalidImage
 	}
 	info := imageresize.Info{Width: cfg.Width, Height: cfg.Height, FrameCount: frames, Format: detected.Format, ContentType: detected.ContentType}
-	return source{info: info, encode: func(ctx context.Context, w, h int) ([]byte, error) {
+	var pixels image.Image
+	if frames == 1 {
+		canvas := image.NewRGBA(image.Rect(0, 0, cfg.Width, cfg.Height))
+		draw.Draw(canvas, anim.Image[0].Bounds(), anim.Image[0], anim.Image[0].Bounds().Min, draw.Src)
+		pixels = canvas
+	}
+	return source{pixels: pixels, info: info, encode: func(ctx context.Context, w, h int) ([]byte, error) {
 		bounds := image.Rect(0, 0, cfg.Width, cfg.Height)
 		canvas := image.NewRGBA(bounds)
 		// A transparent source starts with a transparent canvas. Otherwise use

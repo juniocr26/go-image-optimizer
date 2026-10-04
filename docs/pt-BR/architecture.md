@@ -276,3 +276,5 @@ Upload
 ```
 
 Essa direção não está implementada hoje. Ela deve ser introduzida somente com requisitos claros e trade-offs documentados sobre armazenamento, retenção, limpeza, observabilidade, segurança e custo operacional.
+
+A conversão usa `imageconversion` para validar o destino e coordenar processamento, `imaging/convert` para codificar os pixels orientados do decodificador compartilhado do Resize e `handler/convert_image` para transporte multipart e download. O proxy Next.js encaminha formato de origem/saída e dimensões. `ImageSettingsDialog` compartilha modal, foco e comportamento de fechamento entre Resize e Convert; controles e estado continuam separados, e `ImageResultModal` apresenta ambos os resultados.

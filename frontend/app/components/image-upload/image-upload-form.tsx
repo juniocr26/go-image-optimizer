@@ -8,6 +8,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { ImageConvertModal } from "../image-convert/image-convert-modal";
 import { ImageResizeModal } from "../image-resize/image-resize-modal";
 import { ImageDropZone } from "./image-drop-zone";
 import {
@@ -29,6 +30,7 @@ export function ImageUploadForm() {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [selectedAction, setSelectedAction] =
     useState<ImageActionId>("compress");
+  const [isConvertModalOpen, setIsConvertModalOpen] = useState(false);
   const [isResizeModalOpen, setIsResizeModalOpen] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -153,6 +155,8 @@ export function ImageUploadForm() {
       return;
     }
 
+    if (selectedAction === "convert") { setError(null); setIsConvertModalOpen(true); return; }
+
     if (selectedAction === "resize") {
       setError(null);
       setIsResizeModalOpen(true);
@@ -213,8 +217,8 @@ export function ImageUploadForm() {
       onSubmit={handleSubmit}
     >
       <div
-        aria-hidden={isResultModalOpen || isResizeModalOpen ? true : undefined}
-        inert={isResultModalOpen || isResizeModalOpen ? true : undefined}
+        aria-hidden={isResultModalOpen || isResizeModalOpen || isConvertModalOpen ? true : undefined}
+        inert={isResultModalOpen || isResizeModalOpen || isConvertModalOpen ? true : undefined}
         className="grid gap-4"
       >
         <ImageDropZone
@@ -260,6 +264,10 @@ export function ImageUploadForm() {
             setIsResultModalOpen(true);
           }}
         />
+      ) : null}
+
+      {isConvertModalOpen && selectedFile && previewUrl ? (
+        <ImageConvertModal file={selectedFile} previewUrl={previewUrl} returnFocusRef={runButtonRef} onClose={() => setIsConvertModalOpen(false)} onComplete={(converted) => { setIsConvertModalOpen(false); setResult(converted); setIsResultModalOpen(true); }} />
       ) : null}
 
       {result ? (

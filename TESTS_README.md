@@ -174,3 +174,14 @@ Then open the frontend, upload representative JPEG/JPG, PNG, WebP, AVIF, HEIC/HE
 UI checks for Resize: Run opens configuration without resizing; dimensions match orientation; editing either field updates the other; ratio unlock stretches; enlargement shows the detail note and matches downloaded dimensions; percentage labels show linear reductions; invalid targets disable submission; loading and errors stay in the modal; retry works; output dimensions and download are real; cancel/Escape restore focus; keyboard tabs remain in the dialog; mobile content scrolls with accessible footer; HEIC/TIFF fallback still allows processing; repeat operations use the original. Recheck compression after Resize. These are manual browser workflow checks, separate from the automated calculation tests.
 
 See [Resize behavior/API](docs/en/architecture.md#image-resize).
+
+## Conversion verification
+
+```sh
+docker compose run --rm backend-test
+docker compose run --rm --no-deps frontend-dev node --test tests/resize-options.test.mjs tests/conversion-size.test.mjs
+docker compose run --rm --no-deps frontend-dev npx tsc --noEmit
+docker compose run --rm --no-deps -e NODE_ENV=production frontend-dev npm run build
+```
+
+Tests cover output families and decoding, alpha/white compositing, EXIF orientation, animation rejection, cancellation, HTTP headers, duplicates and larger output. Existing tests cover shared decoder limits/variants and Compression/Resize regressions. Manual browser verification should cover desktop/mobile, Tab/Shift+Tab/Escape, loading/retry, preserving the target on error, preview fallback and download; it was not performed in this session.

@@ -26,11 +26,12 @@ var (
 )
 
 type Result struct {
-	Data        []byte
-	Format      Format
-	ContentType string
-	Width       int
-	Height      int
-	Animated    bool
-	FrameCount  int
+	SourceFormat Format
+	Data         []byte
+	Format       Format
+	ContentType  string
+	Width        int
+	Height       int
+	Animated     bool
+	FrameCount   int
 }

@@ -174,3 +174,14 @@ Depois, abra o frontend, envie amostras representativas de JPEG/JPG, PNG, WebP, 
 Validação de interface: Run abre a configuração sem executar Resize; dimensões consideram orientação; editar um campo atualiza o outro; destravar permite distorção; ampliação mostra a nota sobre detalhes e corresponde às dimensões baixadas; porcentagens indicam redução linear; valores inválidos impedem envio; loading/erros ficam no modal; retry funciona; dimensões/download são reais; cancelar/Escape restauram foco; Tab permanece no dialog; conteúdo mobile rola com rodapé acessível; fallback HEIC/TIFF permite processar; repetir parte do original. Revalidar compressão após Resize. São verificações manuais do fluxo no navegador, separadas dos testes automatizados de cálculo.
 
 Consulte [comportamento/API do Resize](docs/pt-BR/architecture.md#redimensionamento-de-imagens).
+
+## Validação da conversão
+
+```sh
+docker compose run --rm backend-test
+docker compose run --rm --no-deps frontend-dev node --test tests/resize-options.test.mjs tests/conversion-size.test.mjs
+docker compose run --rm --no-deps frontend-dev npx tsc --noEmit
+docker compose run --rm --no-deps -e NODE_ENV=production frontend-dev npm run build
+```
+
+Os testes cobrem famílias de saída, decodificação, alfa/fundo branco, orientação EXIF, rejeição de animação, cancelamento, contrato HTTP, duplicatas e saída maior. Os testes existentes continuam cobrindo limites e variantes do decodificador compartilhado e regressões de compressão/resize. A verificação manual no navegador deve cobrir desktop/mobile, Tab/Shift+Tab/Escape, loading/retry, erro com destino preservado, fallback de prévia e download; não foi executada nesta sessão.
