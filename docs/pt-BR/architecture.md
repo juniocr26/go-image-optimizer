@@ -230,7 +230,7 @@ O frontend mantém o fluxo em estado React:
 
 - drop zone inicial;
 - preview da imagem selecionada quando o navegador consegue renderizar o formato;
-- placeholder sem preview para formatos que muitos navegadores não renderizam, como HEIC ou TIFF;
+- fallback de miniatura no backend quando o carregamento nativo falha;
 - tamanho original do arquivo;
 - seleção de operação e ação explícita de Run;
 - configuração de Resize com inspeção da origem e dimensões efetivas;
@@ -278,3 +278,11 @@ Upload
 Essa direção não está implementada hoje. Ela deve ser introduzida somente com requisitos claros e trade-offs documentados sobre armazenamento, retenção, limpeza, observabilidade, segurança e custo operacional.
 
 A conversão usa `imageconversion` para validar o destino e coordenar processamento, `imaging/convert` para codificar os pixels orientados do decodificador compartilhado do Resize e `handler/convert_image` para transporte multipart e download. O proxy Next.js encaminha formato de origem/saída e dimensões. `ImageSettingsDialog` compartilha modal, foco e comportamento de fechamento entre Resize e Convert; controles e estado continuam separados, e `ImageResultModal` apresenta ambos os resultados.
+
+## Prévias de imagens
+
+O upload, as configurações de Resize/Convert e todos os modais de resultado tentam primeiro carregar a imagem no navegador. A correção de MIME apenas para exibição reconhece bytes de JPEG, PNG, GIF, WebP e AVIF sem alterar a origem. Se o carregamento falhar, o componente compartilhado envia o File original ou o Blob do resultado real ao proxy de mesma origem `/api/images/preview` e ao endpoint Go `POST /images/preview` (exatamente um arquivo multipart chamado `image`).
+
+O endpoint sem estado reutiliza detecção, decodificação, orientação e limites de recursos e variantes do processamento. Retorna uma miniatura proporcional limitada a 1200 × 1200, sem corte nem ampliação: PNG para transparência e JPEG para pixels opacos, com Content-Type correspondente e `Cache-Control: no-store`. O fallback aceita imagens estáticas suportadas de JPEG, PNG, WebP, AVIF, HEIC/HEIF, GIF, BMP e TIFF de página única. Animações, APNG, sequências AVIF, TIFF multipágina e variantes HEIF com múltiplas imagens não suportadas têm prévia explicitamente indisponível; RAW continua não suportado. O navegador pode exibir nativamente variantes rejeitadas pelo fallback.
+
+Carregamento, erros e **Retry preview** aparecem na área de prévia. Falhas não bloqueiam operações ou downloads. Os bytes gerados ficam em cache pela identidade do Blob durante a sessão; requisições concorrentes são compartilhadas, requisições obsoletas são canceladas quando o último consumidor sai, respostas antigas são ignoradas e URLs de exibição são revogadas. O cache guarda bytes, não URLs persistentes. Original, resultado real e bytes de exibição permanecem separados: downloads, nomes, formatos, tamanhos e dimensões descrevem os arquivos reais, nunca a miniatura. Recarregar limpa o cache.

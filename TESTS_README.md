@@ -88,7 +88,7 @@ Manual UI validation should cover:
 - drag-and-drop selection;
 - file picker selection;
 - previews for browser-renderable formats;
-- placeholder rendering for formats the browser cannot preview, such as many HEIC or TIFF files;
+- backend fallback and retry for formats the browser cannot preview, such as HEIC or TIFF;
 - operation selection and Run button behavior;
 - disabled duplicate submissions while compressing;
 - indeterminate loading state;
@@ -185,3 +185,5 @@ docker compose run --rm --no-deps -e NODE_ENV=production frontend-dev npm run bu
 ```
 
 Tests cover output families and decoding, alpha/white compositing, EXIF orientation, animation rejection, cancellation, HTTP headers, duplicates and larger output. Existing tests cover shared decoder limits/variants and Compression/Resize regressions. Manual browser verification should cover desktop/mobile, Tab/Shift+Tab/Escape, loading/retry, preserving the target on error, preview fallback and download; it was not performed in this session.
+
+Preview regression tests cover real format fixtures, MIME and independent decoding, thumbnail bounds, alpha, orientation, invalid input, variant and pixel/upload limits, multipart validation, source-byte preservation, result-Blob uploads, cache reuse/retry and request cancellation. Run frontend tests with `node --test tests/*.test.mjs` in the documented frontend-dev container. Browser interaction verification was not performed.

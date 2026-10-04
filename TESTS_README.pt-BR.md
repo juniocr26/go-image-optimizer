@@ -185,3 +185,5 @@ docker compose run --rm --no-deps -e NODE_ENV=production frontend-dev npm run bu
 ```
 
 Os testes cobrem famílias de saída, decodificação, alfa/fundo branco, orientação EXIF, rejeição de animação, cancelamento, contrato HTTP, duplicatas e saída maior. Os testes existentes continuam cobrindo limites e variantes do decodificador compartilhado e regressões de compressão/resize. A verificação manual no navegador deve cobrir desktop/mobile, Tab/Shift+Tab/Escape, loading/retry, erro com destino preservado, fallback de prévia e download; não foi executada nesta sessão.
+
+Os testes de prévia cobrem fixtures reais, MIME e decodificação independente, limites da miniatura, alpha, orientação, entradas inválidas, limites de pixels/upload e variantes, validação multipart, preservação da origem, envio do Blob de resultado, cache/retry e cancelamento. Execute `node --test tests/*.test.mjs` no container frontend-dev documentado. A verificação de interação no navegador não foi realizada.

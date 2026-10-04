@@ -70,6 +70,7 @@ export function ImageDropZone({
             fileType={selectedFile.type}
             imageClassName="h-48 w-full object-contain sm:h-56"
             src={previewUrl}
+                source={selectedFile}
           />
         ) : (
           <div className="grid h-16 w-16 place-items-center rounded-full bg-[#d9f4ec] text-[#08a87d] shadow-[0_16px_36px_rgba(0,168,125,0.16)]">

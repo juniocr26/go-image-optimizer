@@ -173,6 +173,7 @@ export function ImageResultModal({
             fileType={result.type}
             imageClassName="h-60 w-full object-contain sm:h-72"
             src={result.url}
+                source={result.blob}
           />
 
           {result.operation === "convert" ? <dl className="mt-4 grid grid-cols-2 gap-3"><ResultMetric label="Original format" value={result.sourceFormat?.toUpperCase() ?? "—"} /><ResultMetric label="Converted format" value={result.outputFormat?.toUpperCase() ?? "—"} /></dl> : null}

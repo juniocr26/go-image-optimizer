@@ -24,7 +24,19 @@ type useCase interface {
 func Inspect(logger *slog.Logger, uc useCase) http.HandlerFunc { return handle(logger, uc, true) }
 func Process(logger *slog.Logger, uc useCase) http.HandlerFunc { return handle(logger, uc, false) }
 
+type previewProcessor interface {
+	Preview(context.Context, []byte) (imageprocessing.Result, error)
+}
+
+func Preview(logger *slog.Logger, processor previewProcessor) http.HandlerFunc {
+	return handleOperation(logger, nil, false, processor)
+}
+
 func handle(logger *slog.Logger, uc useCase, inspect bool) http.HandlerFunc {
+	return handleOperation(logger, uc, inspect, nil)
+}
+
+func handleOperation(logger *slog.Logger, uc useCase, inspect bool, preview previewProcessor) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		defer func() {
 			if r.MultipartForm != nil {
@@ -56,11 +68,11 @@ func handle(logger *slog.Logger, uc useCase, inspect bool) http.HandlerFunc {
 			return
 		}
 		var options imageprocessing.Format
-		if inspect && len(r.MultipartForm.Value) != 0 {
+		if (inspect || preview != nil) && len(r.MultipartForm.Value) != 0 {
 			imagehttp.WriteJSONError(w, 400, "inspection accepts only image")
 			return
 		}
-		if !inspect {
+		if !inspect && preview == nil {
 			options, err = parseTarget(r)
 			if err != nil {
 				imagehttp.WriteJSONError(w, 400, "invalid targetFormat: choose a supported destination different from the source")
@@ -76,6 +88,17 @@ func handle(logger *slog.Logger, uc useCase, inspect bool) http.HandlerFunc {
 		input, err := io.ReadAll(file)
 		if err != nil {
 			imagehttp.WriteJSONError(w, 400, "could not read image")
+			return
+		}
+		if preview != nil {
+			result, err := preview.Preview(r.Context(), input)
+			if err != nil {
+				imagehttp.WriteProcessingError(w, logger, err)
+				return
+			}
+			w.Header().Set("Content-Type", result.ContentType)
+			w.Header().Set("Content-Length", strconv.Itoa(len(result.Data)))
+			_, _ = w.Write(result.Data)
 			return
 		}
 		if inspect {

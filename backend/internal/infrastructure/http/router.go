@@ -27,6 +27,8 @@ func NewRouter(logger *slog.Logger) http.Handler {
 	mux.HandleFunc("POST /images/resize/info", resizeimage.Inspect(logger, resizeImage))
 	mux.HandleFunc("POST /images/resize", resizeimage.Process(logger, resizeImage))
 
+	mux.HandleFunc("POST /images/preview", convertimage.Preview(logger, convert.Processor{}))
+
 	conversion := imageconversion.NewUseCase(convert.Processor{})
 	mux.HandleFunc("POST /images/convert", convertimage.Process(logger, conversion))
 	mux.HandleFunc("POST /images/convert/info", convertimage.Inspect(logger, conversion))

@@ -156,6 +156,7 @@ export function ImageResizeModal({
         name,
         originalSize: file.size,
         size: blob.size,
+        blob,
         type: blob.type,
         url: URL.createObjectURL(blob),
         dimensions,
@@ -215,6 +216,7 @@ export function ImageResizeModal({
                 fileName={file.name}
                 fileType={file.type}
                 src={previewUrl}
+                source={file}
               />
               <p className="mt-3 truncate text-sm font-bold" title={file.name}>
                 {file.name}

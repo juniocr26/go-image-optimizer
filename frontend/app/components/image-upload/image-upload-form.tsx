@@ -191,6 +191,7 @@ export function ImageUploadForm() {
         );
 
       setResult({
+        blob: returnedImage,
         name: downloadName,
         originalSize: selectedFile.size,
         size: returnedImage.size,

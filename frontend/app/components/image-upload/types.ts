@@ -7,6 +7,7 @@ export const IMAGE_ACTIONS = [
 export type ImageActionId = (typeof IMAGE_ACTIONS)[number]["id"];
 
 export type OptimizationResult = {
+  blob: Blob;
   sourceFormat?: string;
   outputFormat?: string;
   operation?: ImageActionId;
