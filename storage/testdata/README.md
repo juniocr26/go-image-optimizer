@@ -1,5 +1,7 @@
 # Test Data
 
+[English](README.md) | [Português](README.pt-BR.md)
+
 `storage/testdata/images` contains versioned real image fixtures for backend integration tests.
 
 These files are test inputs only. They are not application upload storage, compressed outputs, processing history, or user data. The application still processes uploads synchronously and returns processed bytes directly to the caller without persisting them under `storage`.

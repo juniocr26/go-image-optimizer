@@ -1,5 +1,7 @@
 # Arquitetura
 
+[English](../en/architecture.md) | [Português](../pt-BR/architecture.md)
+
 Este documento descreve a arquitetura atual, os trade-offs e o escopo funcional concluído do Go Image Optimizer.
 
 O escopo funcional atual está concluído. A arquitetura permanece focada; manutenção e correções continuam possíveis, sem funcionalidades adicionais planejadas.
@@ -319,3 +321,83 @@ Os timeouts de socket são 5 segundos para headers, 2 minutos para leitura/escri
 PNG best compression e TIFF Deflate/predictor codificam sem perda os pixels recebidos. WebP estático lossless continua lossless em Compressão/Resize, mas a conversão para WebP usa o padrão com perda. Resize altera pixels mesmo com encoder lossless. O caminho multiframe de compressão AVIF não deve ser apresentado como suporte universal verificado a animações: as fixtures automatizadas são estáticas, e Resize/conversão/prévia têm políticas mais restritas.
 
 Os dois containers de aplicação separam dependências Node e Go/nativas. Isso não caracteriza um sistema de microsserviços. Manutenção pode corrigir defeitos ou compatibilidade de bibliotecas dentro do escopo concluído. Evolução para produção deve partir de requisito concreto e medições; não constitui um novo roadmap.
+
+## Decisões de Arquitetura e Trade-offs
+
+### Estado e interpretação
+
+**Implementado:** Compression, Resize, conversão e fallback de prévia, resultados por requisição e testes backend/frontend. **Projetado / preparado arquiteturalmente:** interfaces pequenas de processor/decoder permitem alternativas; não são serviços workers entregues. **Planejado / trabalho futuro:** nenhuma funcionalidade adicional planejada. Condições de revisão abaixo são hipóteses de engenharia, não compromissos de adicionar infraestrutura.
+
+O guia Technical Interview confirma aprendizado deliberado de Go e escopo concluído. Explicações usam também o código atual; alternativas são opções razoáveis, não deliberações históricas presumidas. A tabela anterior continua referência detalhada do comportamento.
+
+### Decisão: Pacotes Go e interfaces pequenas para processamento
+
+**Contexto e decisão.** Decode/transform/encode têm custo relevante comparado ao roteamento. `net/http`, construtores explícitos, erros retornados e interfaces pequenas coordenam isso sem framework HTTP/container de injeção. `NewRouter` conecta implementações concretas aos contratos Compressor, Decoder/Source e Processor da aplicação.
+
+**Justificativa e alternativas.** Atende aprendizado e torna pixels testáveis sem multipart. Node-only reduz runtimes mas muda integração de codecs/nativos; serviço externo de imagens adiciona transporte/deploy. Não há benchmark de superioridade Go.
+
+**Trade-offs e consequências.** Tipos comuns de formato/resultado/erro evitam drift. Interfaces aparecem onde substituição ajuda, sem repositories/entidades para produto sem persistência. Go atende requisições concorrentes, mas codec individual é síncrono; sem pool de workers, paralelização por imagem ou admissão global. Encoding CPU-bound e buffers decodificados podem dominar; multipart/proxy/rede/temporário HEIF adicionam I/O. GC não define orçamento de memória nem controla toda alocação nativa.
+
+**Reavaliar quando.** Profiling mostrar gargalo de codec, concorrência medida exigir admissão ou decode nativo exigir isolamento por processo.
+
+**Evidências:** [router](../../backend/internal/infrastructure/http/router.go), [contratos](../../backend/internal/application/), [dependências](../../backend/go.mod).
+
+### Decisão: Interação React com proxy Next.js de mesma origem
+
+**Contexto e decisão.** Seleção/configuração/prévia/download exigem estado no navegador; Go controla validação/codecs. Componentes React dividem seleção, opções e resultados; rotas Next.js encaminham multipart/headers usando URL backend configurada no servidor.
+
+**Justificativa e alternativas.** Navegador usa URL relativa sem hostname Docker ou API cross-origin. React estático chamando Go remove um salto mas exige configuração de origem/CORS. HTML servido por Go reduz infraestrutura com outra implementação interativa.
+
+**Trade-offs e consequências.** Node/Go são dois runtimes, não microsserviços de domínio independentes. Proxy lê formulário inteiro e resposta via `arrayBuffer`, sem streaming ponta a ponta e com cópias de memória. Valida tamanho depois do parsing. Conexão backend falha vira 502. Não há endpoint de progresso: UI usa loading indeterminado/desabilita ações relevantes. Original/resultados separados permitem repetir sobre original e manter metadados verdadeiros de download.
+
+**Reavaliar quando.** Uploads/concorrência tornarem buffering caro ou outro cliente precisar de API Go direta.
+
+**Evidências:** [proxy](../../frontend/app/api/images/forward-image-request.ts), [estado upload](../../frontend/app/components/image-upload/image-upload-form.tsx), [modal compartilhado](../../frontend/app/components/image-upload/image-settings-dialog.tsx).
+
+### Decisão: Resultados síncronos e efêmeros sem histórico servidor
+
+**Contexto e decisão.** Usuário processa um arquivo e baixa resposta. Backend não guarda registros, IDs ou chaves de object store. Object URLs são revogadas ao substituir/desmontar. Binding HEIF escreve em arquivo temporário OS; helper fecha/lê/remove. Parsing multipart pode usar temporários removidos pelos handlers.
+
+**Justificativa e alternativas.** Resposta única evita job IDs, polling, retenção, autorização sobre arquivos e retries de jobs. Fila permite processamento além da requisição mas precisa de estado durável de job/arquivo. Cache de upload evita reenvio para inspeção, com custo de expiração/retenção.
+
+**Trade-offs e consequências.** Reload perde resultados; sem recuperação/compartilhamento posterior. Inspeção exige novo upload/decode para processamento e conversão repete inspeção/decode internamente. Cancelamento cooperativo: Compression verifica só antes/depois; demais têm checkpoints, sem interromper codec nativo à força. Timeouts de socket não são deadlines de CPU. Limpeza explícita em retorno/erro não prova recuperação de crash ou ausência de leaks nativos.
+
+**Reavaliar quando.** Requisito concreto exigir jobs longos, lotes ou recuperação após reload; medir recursos/duração e definir retenção/recuperação antes de fila/store.
+
+**Evidências:** [HEIF](../../backend/internal/infrastructure/imaging/heif.go), [timeouts](../../backend/internal/infrastructure/http/server.go), [Compression](../../backend/internal/application/imagecompression/usecase.go), [conversão](../../backend/internal/application/imageconversion/usecase.go).
+
+### Decisão: Validar bytes e limitar trabalho sem alegar sandbox
+
+**Contexto e decisão.** Extensão/MIME podem mentir; arquivo pequeno pode virar muitos pixels. Assinaturas/container brands selecionam codecs; decoders validam conteúdo/variantes. Limites Go: corpo 50 MiB, 32 milhões de pixels, 64 milhões de pixels canvas-frame nas animações onde implementado. 8 MiB multipart é limiar de spill, não limite upload. Só conversão limita saída a 50 MiB após encoding.
+
+**Justificativa e alternativas.** Validação servidor evita confiar na UI. Client-only é contornável; subprocessos com limites CPU/memória dão fronteira mais forte com maior operação.
+
+**Trade-offs e consequências.** Não limitam memória total, alocação nativa transitória ou concorrência. Recuperação de panic não resolve todo crash nativo/OOM. Compression tem multipart menos estrito; Resize aceita alguns extras textuais; helpers comuns não igualam contratos. Sem autenticação/rate limit. Diferente de Aurora/Shortener, portas Compose não restringem loopback. Exposição/isolamento exigem revisão própria de deploy.
+
+**Reavaliar quando.** Tráfego público não confiável, imagens grandes concorrentes ou isolamento estrito forem requisitos.
+
+**Evidências:** [detecção](../../backend/internal/infrastructure/imaging/detection.go), [limites](../../backend/internal/infrastructure/imaging/limits.go), [handlers](../../backend/internal/infrastructure/http/handler/), [Compose](../../docker-compose.yml).
+
+### Decisão: Políticas explícitas por formato e suporte HEIF nativo real
+
+**Contexto e decisão.** Compression preserva família/dimensões; Resize altera dimensões; conversão altera família. Defaults/orientação/alpha/variantes têm resultados distintos. Resize sem mudança retorna bytes originais. Conversão/prévia rejeitam animações em vez de achatá-las silenciosamente.
+
+**Justificativa e alternativas.** Defaults fixos mantêm foco; editor de qualidade/metadados amplia escopo. Decoder Resize/helpers HEIF reutilizam comportamento comum; encoding é específico por operação. libheif/HEVC fornece HEIC real; remover HEIF simplifica dependências nativas. Veja [ADR 001](adr-001-codecs-nativos.md).
+
+**Trade-offs e consequências.** CGO exige compilador/headers build e libheif/plugins runtime; não presumir binário totalmente estático. Encoding lossy perde detalhe e não copia EXIF/ICC universalmente. Catmull–Rom muda pixels e não cria detalhe ausente. Bytes podem aumentar; UI reporta aumento/igualdade/redução. Testes nativos containerizados com fixtures sintéticas/reais e decode independente validam formato/dimensões/alpha/orientação/tempo, não compatibilidade universal/qualidade visual. Não há suíte de interação browser; cálculos/cache frontend não provam foco ou rendering cross-browser.
+
+**Reavaliar quando.** Fidelidade de cor, variantes amplas, deploy estático ou controles de encoding mudarem. Definir fixtures representativas e medidas de qualidade/recursos primeiro.
+
+**Evidências:** [ADR](adr-001-codecs-nativos.md), [encoder](../../backend/internal/infrastructure/imaging/convert/processor.go), [testes](../../TESTS_README.pt-BR.md).
+
+### Decisão: Prévia nativa antes de fallback exclusivamente visual
+
+**Contexto e decisão.** Browser pode não mostrar arquivo processável. Native loading evita chamada; fallback Go gera prévia proporcional até 1200 × 1200, PNG com alpha/JPEG opaco. WeakMap por identidade Blob compartilha requests/bytes na sessão; sem cache servidor.
+
+**Justificativa e alternativas.** Bytes visuais separados de origem/download evitam substituição silenciosa do resultado. Sempre gerar no servidor duplica trabalho para formatos já suportados. Browser-only deixa HEIF/TIFF sem feedback.
+
+**Trade-offs e consequências.** Fallback custa upload/decode e aceita só estáticos. Retry fica na área de prévia; falha não bloqueia operação/download. Último consumidor aborta requests obsoletos; componentes ignoram respostas antigas e revogam URLs. Cache por identidade não deduplica Blobs distintos com bytes iguais e acaba no reload.
+
+**Reavaliar quando.** Tráfego/memória de prévia forem problemas medidos ou fallback animado virar requisito explícito.
+
+**Evidências:** [cache](../../frontend/app/components/image-upload/preview-cache.ts), [componente](../../frontend/app/components/image-upload/browser-image-preview.tsx), [processor](../../backend/internal/infrastructure/imaging/convert/preview.go).

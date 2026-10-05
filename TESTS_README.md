@@ -1,5 +1,7 @@
 # Test Documentation
 
+[English](TESTS_README.md) | [Português](TESTS_README.pt-BR.md)
+
 This document describes the current testing strategy for Go Image Optimizer.
 
 ## Strategy
@@ -214,3 +216,7 @@ docker compose run --rm --no-deps -e NODE_ENV=production frontend-dev npm run bu
 The first backend run established the baseline; the final full suite includes the extended samples and destination-header checks. All 12 frontend tests passed. These checks demonstrate automated behavior in this environment, not browser interaction, visual fidelity, race safety, benchmarks or production capacity. No browser, race or load check was performed. Outputs stayed in memory; production HEIF temporary files are removed by the shared helper. Original fixture bytes were checked against Git and remained unchanged.
 
 The DOCX guide was structurally checked (XML, heading styles, 32 answers, two tables and page field). Rendering with the packaged skill script failed because `pdf2image` is unavailable; this session does not expose the bundled document/LibreOffice runtime. Page layout remains visually unverified.
+
+## Architecture documentation review — 2026-10-05
+
+The existing Docker build stage was built under the temporary tag `portfolio-doc-review-go-tests`. A disposable container ran `go test -count=1 ./...` with CGO enabled, current backend mounted read-only, real fixture directory mounted read-only at `/testdata/images`, and networking disabled. All packages with tests passed, including native HEIF and real fixtures. The existing frontend runtime image ran the 12 calculation/preview-cache tests against read-only current source; all passed. The first frontend invocation had a duplicated `node` argument and exited before tests; the corrected invocation passed. No application stack, browser interaction, frontend build/TypeScript check, race or load test was run. Test containers and the temporary image tag were removed; existing fixtures were preserved. Build caches may remain in Docker.

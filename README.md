@@ -1,5 +1,7 @@
 # Go Image Optimizer
 
+[English](README.md) | [Português](README.pt-BR.md)
+
 An image optimization application built with Go, with a web interface using Next.js, React, and Tailwind CSS.
 
 Compression, Resize and format conversion run synchronously, returning processed images directly to the browser. Browser-native previews have a server-generated fallback.
@@ -77,7 +79,9 @@ For architectural decisions and trade-offs, see [Architecture](docs/en/architect
 
 ## Documentation
 
-- [Technical interview study guide in Brazilian Portuguese](Go-Image-Optimizer-Entrevista-Tecnica.docx)
+- [Architecture Decisions & Trade-offs](docs/en/architecture.md#architecture-decisions--trade-offs)
+
+- [Technical interview study guide in Brazilian Portuguese](../tecnical-interview/Go%20Image%20Optimizer%20%E2%80%94%20Entrevista%20Te%CC%81cnica.docx)
 
 - [Architecture](docs/en/architecture.md)
 - [Image Resize: UX, API, behavior, and limitations](docs/en/architecture.md#image-resize)

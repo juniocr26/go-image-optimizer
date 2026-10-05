@@ -1,5 +1,7 @@
 # Documentação de Testes
 
+[English](TESTS_README.md) | [Português](TESTS_README.pt-BR.md)
+
 Este documento descreve a estratégia atual de testes do Go Image Optimizer.
 
 ## Estratégia
@@ -218,3 +220,7 @@ docker compose run --rm --no-deps -e NODE_ENV=production frontend-dev npm run bu
 A primeira execução estabeleceu a base; a suíte completa final inclui amostras ampliadas e headers de todos os destinos. Os 12 testes de frontend passaram. São verificações automatizadas neste ambiente, não interação de navegador, fidelidade visual, segurança com race detector, benchmarks ou capacidade de produção. Não foram executados testes de navegador, race ou carga. A falha de checkptr/libheif descrita anteriormente é um registro anterior, não uma nova execução desta tarefa. Resultados ficaram em memória; arquivos temporários HEIF são removidos pelo helper compartilhado. Os bytes originais das fixtures foram comparados ao Git e permaneceram intactos.
 
 O guia DOCX foi validado estruturalmente (XML, estilos de título, 32 respostas, duas tabelas e campo de página). A tentativa de renderização pelo script da skill falhou por falta de `pdf2image`; o runtime empacotado de documentos/LibreOffice não está disponível nesta sessão. A paginação e o layout visual do guia permanecem sem inspeção.
+
+## Revisão documental de arquitetura — 2026-10-05
+
+O build stage Docker existente foi construído com tag temporária `portfolio-doc-review-go-tests`. Container descartável executou `go test -count=1 ./...`, CGO habilitado, backend atual somente leitura, fixtures reais somente leitura em `/testdata/images` e rede desabilitada. Todos os pacotes com testes passaram, incluindo HEIF nativo e fixtures reais. Imagem runtime frontend existente executou os 12 testes de cálculo/cache sobre fonte atual somente leitura; todos passaram. A primeira chamada frontend tinha argumento `node` duplicado e falhou antes dos testes; chamada corrigida passou. Sem stack da aplicação, interação browser, build/TypeScript frontend, race ou carga. Containers e tag temporária removidos; fixtures existentes preservadas. Caches de build podem permanecer no Docker.

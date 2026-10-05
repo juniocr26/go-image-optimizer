@@ -1,5 +1,7 @@
 # Dados de Teste
 
+[English](README.md) | [Português](README.pt-BR.md)
+
 `storage/testdata/images` contém imagens reais versionadas usadas como fixtures nos testes de integração do backend.
 
 Esses arquivos são usados apenas como entradas para os testes. Eles não são utilizados para armazenar uploads da aplicação, resultados comprimidos, histórico de processamento ou dados de usuários. A aplicação continua processando os uploads de forma síncrona e retorna os bytes da imagem processada diretamente para quem fez a requisição, sem persistir esses arquivos em `storage`.
