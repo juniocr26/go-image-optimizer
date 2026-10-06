@@ -1,10 +1,15 @@
-FROM golang:1.27.1-alpine AS build
+FROM golang:1.27.1-alpine AS development
 
 WORKDIR /src
 
 RUN apk add --no-cache build-base libheif-dev libheif-libde265 libheif-x265 pkgconf
 
-COPY go.mod ./
+ENV GOMODCACHE=/go/pkg/mod
+ENV GOCACHE=/root/.cache/go-build
+CMD ["go", "run", "./cmd/api"]
+
+FROM development AS build
+COPY go.mod go.sum ./
 RUN go mod download
 
 COPY . .

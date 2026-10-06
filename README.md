@@ -109,10 +109,11 @@ Docker and Docker Compose are the only host requirements; Node.js and npm run in
 Start the frontend development server and backend with live-mounted frontend source:
 
 ```bash
-docker compose --profile dev up frontend-dev
+# First install dependencies as described in docs/en/docker-development-setup.md.
+docker compose -f docker-compose.yml -f compose.development.yaml --profile dev up backend frontend-dev
 ```
 
-Open `http://localhost:3000`. Changes to frontend TypeScript, TSX, CSS, and related source files are detected by Next.js development mode without rebuilding the image. See the Docker guide for the dependency-volume refresh command required when `package.json` or `package-lock.json` changes.
+Open `http://localhost:3000`. Changes to frontend TypeScript, TSX, CSS, and related source files are detected by Next.js development mode without rebuilding the image. See [Docker development setup and recovery](docs/en/docker-development-setup.md) for initial installation and rerunning `npm ci` after lockfile changes. Dependencies now persist on the host; volume deletion is unnecessary.
 
 Validate the production frontend build entirely through Docker:
 

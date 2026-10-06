@@ -1,7 +1,8 @@
-FROM node:24-alpine AS deps
+FROM node:24-alpine AS development-base
 
 WORKDIR /app
 
+FROM development-base AS deps
 COPY package.json package-lock.json ./
 RUN npm ci
 

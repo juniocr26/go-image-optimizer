@@ -41,10 +41,13 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-      target: development
+      target: development-base
+    command: ["npm", "run", "dev", "--", "--hostname", "0.0.0.0"]
     profiles:
       - dev
     environment:
+      NODE_ENV: development
+      NEXT_TELEMETRY_DISABLED: "1"
       BACKEND_URL: ${BACKEND_URL:-http://backend:8080}
       HOSTNAME: 0.0.0.0
       PORT: 3000
@@ -54,9 +57,3 @@ services:
       - backend
     volumes:
       - ./frontend:/app
-      - frontend-node-modules:/app/node_modules
-      - frontend-next:/app/.next
-
-volumes:
-  frontend-node-modules:
-  frontend-next:

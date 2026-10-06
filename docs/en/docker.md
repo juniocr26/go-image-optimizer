@@ -39,24 +39,7 @@ The `storage/testdata/images` mount contains versioned real image fixtures used 
 
 ## Frontend Development with Docker
 
-Only Docker and Docker Compose are required on the host. Node.js, npm, and frontend dependencies stay inside Docker.
-
-Start the backend and persistent Next.js development server with:
-
-```bash
-docker compose --profile dev up frontend-dev
-```
-
-Then open `http://localhost:3000`. The service bind mounts `./frontend` at `/app`, so edits to TSX, TypeScript, CSS, and other frontend source files are detected by Next.js development mode and appear on refresh without rebuilding the image. Named volumes at `/app/node_modules` and `/app/.next` keep dependencies and development build output container-managed instead of exposing or replacing them through the host bind mount.
-
-Stop the development environment with `Ctrl+C`, or use `docker compose --profile dev down` when it was started detached. After changing `frontend/package.json` or `frontend/package-lock.json`, recreate the dependency volume and development image so `npm ci` repopulates it from the new lockfile:
-
-```bash
-docker compose --profile dev down --volumes
-docker compose --profile dev up --build frontend-dev
-```
-
-The frontend API route continues to reach the Compose backend through `BACKEND_URL=http://backend:8080` by default. `FRONTEND_PORT` and `BACKEND_PORT` can still override the host ports.
+Use [Docker development setup and dependency recovery](docker-development-setup.md) for the complete initial installation, host bind mounts, Go caches and safe shutdown workflow. `frontend-dev` now uses host `frontend/node_modules` and `frontend/.next`, rather than named volumes. Install with `npm ci` in the documented one-off setup container before starting the development server. Do not remove persistent volumes to recover dependencies.
 
 ## Frontend Production Build Validation
 

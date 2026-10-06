@@ -1,0 +1,26 @@
+services:
+  backend:
+    image: go-image-optimizer-backend:development
+    build:
+      target: development
+    working_dir: /src
+    environment:
+      CGO_ENABLED: "1"
+      GOMODCACHE: /go/pkg/mod
+      GOCACHE: /root/.cache/go-build
+    volumes:
+      - ./backend:/src
+      - ./backend/.cache/go-mod:/go/pkg/mod
+      - ./backend/.cache/go-build:/root/.cache/go-build
+  backend-test:
+    image: go-image-optimizer-backend-tests:development
+    build:
+      target: development
+    environment:
+      GOMODCACHE: /go/pkg/mod
+      GOCACHE: /root/.cache/go-build
+    volumes:
+      - ./backend/.cache/go-mod:/go/pkg/mod
+      - ./backend/.cache/go-build:/root/.cache/go-build
+  frontend-dev:
+    image: go-image-optimizer-frontend:development
