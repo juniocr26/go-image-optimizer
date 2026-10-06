@@ -1,6 +1,6 @@
 # ADR 001: Codecs nativos de imagem
 
-[English](../en/adr-001-native-image-codecs.md) | [Português](adr-001-codecs-nativos.md)
+[English](../../en/adr/001-native-image-codecs.md) | [Português](001-native-image-codecs.md)
 
 ## Status
 
@@ -45,4 +45,4 @@ A decisão deve ser revisitada se requisitos futuros exigirem runtime totalmente
 
 ## Nota sobre o escopo atual
 
-Este ADR registra a decisão de codec nativo; os critérios hipotéticos de reavaliação não constituem roadmap. A aplicação atual implementa Compressão, Resize, conversão e fallback de prévia. Os helpers HEIF atendem a essas operações; não há persistência nem infraestrutura assíncrona planejada. Consulte a [arquitetura atual e seus trade-offs](architecture.md#trade-offs).
+Este ADR registra a decisão de codec nativo; os critérios hipotéticos de reavaliação não constituem roadmap. A aplicação atual implementa Compressão, Resize, conversão e fallback de prévia. Os helpers HEIF atendem a essas operações; não há persistência nem infraestrutura assíncrona planejada. Consulte a [arquitetura atual e seus trade-offs](../architecture.md#trade-offs).

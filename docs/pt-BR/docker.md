@@ -39,24 +39,7 @@ O mount `storage/testdata/images` contém fixtures reais de imagem versionadas u
 
 ## Desenvolvimento do frontend com Docker
 
-Apenas Docker e Docker Compose são necessários no host. Node.js, npm e as dependências do frontend permanecem dentro do Docker.
-
-Inicie o backend e o servidor persistente de desenvolvimento do Next.js com:
-
-```bash
-docker compose --profile dev up frontend-dev
-```
-
-Depois, acesse `http://localhost:3000`. O serviço monta `./frontend` em `/app`, então alterações em TSX, TypeScript, CSS e outros arquivos-fonte do frontend são detectadas pelo modo de desenvolvimento do Next.js e aparecem ao atualizar a página sem reconstruir a imagem. Volumes nomeados em `/app/node_modules` e `/app/.next` mantêm as dependências e a saída de desenvolvimento gerenciadas pelo container, sem expô-las ou substituí-las pelo bind mount do host.
-
-Interrompa o ambiente de desenvolvimento com `Ctrl+C`, ou use `docker compose --profile dev down` quando ele tiver sido iniciado em segundo plano. Após mudar `frontend/package.json` ou `frontend/package-lock.json`, recrie o volume de dependências e a imagem de desenvolvimento para que `npm ci` o preencha usando o novo lockfile:
-
-```bash
-docker compose --profile dev down --volumes
-docker compose --profile dev up --build frontend-dev
-```
-
-A rota de API do frontend continua acessando o backend do Compose por `BACKEND_URL=http://backend:8080` por padrão. `FRONTEND_PORT` e `BACKEND_PORT` ainda podem sobrescrever as portas no host.
+Use [desenvolvimento Docker e recuperação](docker-development-setup.md) para instalação, binds do host, caches Go e parada segura. `frontend-dev` usa `frontend/node_modules` e `frontend/.next` no host, sem volumes nomeados. Instale com npm ci no container one-off documentado antes de iniciar; não remova volumes para recuperar dependências.
 
 ## Validação do build de produção do frontend
 
@@ -101,7 +84,7 @@ Use `docker compose run` para `backend-test` porque o container de teste é temp
 ## Comandos de validação
 
 ```bash
-docker compose config
+docker compose config --quiet
 docker compose build backend
 docker compose build backend-test
 docker compose build frontend

@@ -1,6 +1,6 @@
 # Documentação de Testes
 
-[English](TESTS_README.md) | [Português](TESTS_README.pt-BR.md)
+[English](../en/testing.md) | [Português](testing.md)
 
 Este documento descreve a estratégia atual de testes do Go Image Optimizer.
 
@@ -175,7 +175,7 @@ Depois, abra o frontend, envie amostras representativas de JPEG/JPG, PNG, WebP, 
 
 Validação de interface: Run abre a configuração sem executar Resize; dimensões consideram orientação; editar um campo atualiza o outro; destravar permite distorção; ampliação mostra a nota sobre detalhes e corresponde às dimensões baixadas; porcentagens indicam redução linear; valores inválidos impedem envio; loading/erros ficam no modal; retry funciona; dimensões/download são reais; cancelar/Escape restauram foco; Tab permanece no dialog; conteúdo mobile rola com rodapé acessível; fallback HEIC/TIFF permite processar; repetir parte do original. Revalidar compressão após Resize. São verificações manuais do fluxo no navegador, separadas dos testes automatizados de cálculo.
 
-Consulte [comportamento/API do Resize](docs/pt-BR/architecture.md#redimensionamento-de-imagens).
+Consulte [comportamento/API do Resize](architecture.md#redimensionamento-de-imagens).
 
 ## Validação da conversão
 
@@ -224,3 +224,33 @@ O guia DOCX foi validado estruturalmente (XML, estilos de título, 32 respostas,
 ## Revisão documental de arquitetura — 2026-10-05
 
 O build stage Docker existente foi construído com tag temporária `portfolio-doc-review-go-tests`. Container descartável executou `go test -count=1 ./...`, CGO habilitado, backend atual somente leitura, fixtures reais somente leitura em `/testdata/images` e rede desabilitada. Todos os pacotes com testes passaram, incluindo HEIF nativo e fixtures reais. Imagem runtime frontend existente executou os 12 testes de cálculo/cache sobre fonte atual somente leitura; todos passaram. A primeira chamada frontend tinha argumento `node` duplicado e falhou antes dos testes; chamada corrigida passou. Sem stack da aplicação, interação browser, build/TypeScript frontend, race ou carga. Containers e tag temporária removidos; fixtures existentes preservadas. Caches de build podem permanecer no Docker.
+
+
+## Inventário de fixtures
+
+`storage/testdata/images` contém imagens reais versionadas usadas como fixtures nos testes de integração do backend.
+
+Esses arquivos são usados apenas como entradas para os testes. Eles não são utilizados para armazenar uploads da aplicação, resultados comprimidos, histórico de processamento ou dados de usuários. A aplicação continua processando os uploads de forma síncrona e retorna os bytes da imagem processada diretamente para quem fez a requisição, sem persistir esses arquivos em `storage`.
+
+Os resultados das compressões realizadas durante os testes devem permanecer em memória ou em diretórios temporários dos testes do Go, como `t.TempDir()`. Não grave os arquivos gerados novamente em `storage/testdata/images`.
+
+
+## Inventário de amostras físicas
+
+As nove amostras versionadas de processamento são estáticas, com 512 × 512 pixels. Os arquivos HEIC/HEIF usam a mesma família.
+
+| Arquivo | Bytes | Família |
+| --- | --- | --- |
+| [sample.avif](../../storage/testdata/images/sample.avif) | 4351 | avif |
+| [sample.bmp](../../storage/testdata/images/sample.bmp) | 1048714 | bmp |
+| [sample.gif](../../storage/testdata/images/sample.gif) | 11596 | gif |
+| [sample.heic](../../storage/testdata/images/sample.heic) | 6622 | heif |
+| [sample.heif](../../storage/testdata/images/sample.heif) | 8391 | heif |
+| [sample.jpg](../../storage/testdata/images/sample.jpg) | 30262 | jpeg |
+| [sample.png](../../storage/testdata/images/sample.png) | 24487 | png |
+| [sample.tiff](../../storage/testdata/images/sample.tiff) | 1048946 | tiff |
+| [sample.webp](../../storage/testdata/images/sample.webp) | 7432 | webp |
+
+Compressão e prévia já usam os nove arquivos. Resize verifica quatro transformações por amostra e bytes intactos sem mudança. Conversão verifica nove origens × oito destinos, incluindo nove erros esperados de mesma família. Saídas ficam em memória e a montagem Docker é somente leitura.
+
+Os quatro recursos visuais versionados em `frontend/public/images` (`branding/favicon.ico`, `branding/logo.png`, `hero/grassfield.png`, `hero/mountain.png`) são marca/fundos da interface, não amostras de testes de processamento; também permanecem intactos.

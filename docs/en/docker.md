@@ -84,7 +84,7 @@ Use `docker compose run` for `backend-test` because the test container is short-
 ## Validation Commands
 
 ```bash
-docker compose config
+docker compose config --quiet
 docker compose build backend
 docker compose build backend-test
 docker compose build frontend

@@ -1,6 +1,6 @@
 # Arquitetura
 
-[English](../en/architecture.md) | [Português](../pt-BR/architecture.md)
+[English](../en/architecture.md) | [Português](architecture.md)
 
 Este documento descreve a arquitetura atual, os trade-offs e o escopo funcional concluído do Go Image Optimizer.
 
@@ -187,7 +187,7 @@ As rotas de mesma origem no Next.js são `/api/images/resize/info` e `/api/image
 - Se as dimensões efetivas forem iguais às originais de exibição, os bytes originais são devolvidos intactos, preservando metadados e evitando recodificação com perda desnecessária.
 - Nos demais casos, os parâmetros de encode acompanham os padrões existentes (JPEG/WebP 82, AVIF/HEIF 60; PNG best compression; TIFF Deflate). O resultado pode ser maior em bytes. Resize não recorta, converte formatos, processa lotes nem melhora detalhes. Conversão é outra operação; histórico e progresso percentual estão fora do escopo atual.
 
-Consulte a [documentação de testes](../../TESTS_README.pt-BR.md) para cobertura automatizada e validação da interface.
+Consulte a [documentação de testes](testing.md) para cobertura automatizada e validação da interface.
 
 ## 6. Ciclo de vida dos arquivos e armazenamento
 
@@ -253,7 +253,7 @@ O serviço Compose `backend-test` é uma conveniência local de teste/desenvolvi
 
 O suporte a HEIC/HEIF exige libheif nativa e plugins de codec HEVC no Docker. Por isso, a imagem do backend usa build Alpine com CGO habilitado e runtime Alpine com pacotes libheif, em vez de uma imagem distroless totalmente estática.
 
-Consulte [ADR 001: Codecs nativos de imagem](adr-001-codecs-nativos.md) e [Docker](docker.md).
+Consulte [ADR 001: Codecs nativos de imagem](adr/001-native-image-codecs.md) e [Docker](docker.md).
 
 ## 11. Limitações atuais
 
@@ -340,7 +340,7 @@ O guia Technical Interview confirma aprendizado deliberado de Go e escopo conclu
 
 **Reavaliar quando.** Profiling mostrar gargalo de codec, concorrência medida exigir admissão ou decode nativo exigir isolamento por processo.
 
-**Evidências:** [router](../../backend/internal/infrastructure/http/router.go), [contratos](../../backend/internal/application/), [dependências](../../backend/go.mod).
+**Evidências:** [router](../../backend/internal/infrastructure/http/router.go), [contratos](../../backend/internal/application), [dependências](../../backend/go.mod).
 
 ### Decisão: Interação React com proxy Next.js de mesma origem
 
@@ -376,19 +376,19 @@ O guia Technical Interview confirma aprendizado deliberado de Go e escopo conclu
 
 **Reavaliar quando.** Tráfego público não confiável, imagens grandes concorrentes ou isolamento estrito forem requisitos.
 
-**Evidências:** [detecção](../../backend/internal/infrastructure/imaging/detection.go), [limites](../../backend/internal/infrastructure/imaging/limits.go), [handlers](../../backend/internal/infrastructure/http/handler/), [Compose](../../docker-compose.yml).
+**Evidências:** [detecção](../../backend/internal/infrastructure/imaging/detection.go), [limites](../../backend/internal/infrastructure/imaging/limits.go), [handlers](../../backend/internal/infrastructure/http/handler), [Compose](../../docker-compose.yml).
 
 ### Decisão: Políticas explícitas por formato e suporte HEIF nativo real
 
 **Contexto e decisão.** Compression preserva família/dimensões; Resize altera dimensões; conversão altera família. Defaults/orientação/alpha/variantes têm resultados distintos. Resize sem mudança retorna bytes originais. Conversão/prévia rejeitam animações em vez de achatá-las silenciosamente.
 
-**Justificativa e alternativas.** Defaults fixos mantêm foco; editor de qualidade/metadados amplia escopo. Decoder Resize/helpers HEIF reutilizam comportamento comum; encoding é específico por operação. libheif/HEVC fornece HEIC real; remover HEIF simplifica dependências nativas. Veja [ADR 001](adr-001-codecs-nativos.md).
+**Justificativa e alternativas.** Defaults fixos mantêm foco; editor de qualidade/metadados amplia escopo. Decoder Resize/helpers HEIF reutilizam comportamento comum; encoding é específico por operação. libheif/HEVC fornece HEIC real; remover HEIF simplifica dependências nativas. Veja [ADR 001](adr/001-native-image-codecs.md).
 
 **Trade-offs e consequências.** CGO exige compilador/headers build e libheif/plugins runtime; não presumir binário totalmente estático. Encoding lossy perde detalhe e não copia EXIF/ICC universalmente. Catmull–Rom muda pixels e não cria detalhe ausente. Bytes podem aumentar; UI reporta aumento/igualdade/redução. Testes nativos containerizados com fixtures sintéticas/reais e decode independente validam formato/dimensões/alpha/orientação/tempo, não compatibilidade universal/qualidade visual. Não há suíte de interação browser; cálculos/cache frontend não provam foco ou rendering cross-browser.
 
 **Reavaliar quando.** Fidelidade de cor, variantes amplas, deploy estático ou controles de encoding mudarem. Definir fixtures representativas e medidas de qualidade/recursos primeiro.
 
-**Evidências:** [ADR](adr-001-codecs-nativos.md), [encoder](../../backend/internal/infrastructure/imaging/convert/processor.go), [testes](../../TESTS_README.pt-BR.md).
+**Evidências:** [ADR](adr/001-native-image-codecs.md), [encoder](../../backend/internal/infrastructure/imaging/convert/processor.go), [testes](testing.md).
 
 ### Decisão: Prévia nativa antes de fallback exclusivamente visual
 

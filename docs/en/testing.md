@@ -1,6 +1,6 @@
 # Test Documentation
 
-[English](TESTS_README.md) | [Português](TESTS_README.pt-BR.md)
+[English](testing.md) | [Português](../pt-BR/testing.md)
 
 This document describes the current testing strategy for Go Image Optimizer.
 
@@ -175,7 +175,7 @@ Then open the frontend, upload representative JPEG/JPG, PNG, WebP, AVIF, HEIC/HE
 
 UI checks for Resize: Run opens configuration without resizing; dimensions match orientation; editing either field updates the other; ratio unlock stretches; enlargement shows the detail note and matches downloaded dimensions; percentage labels show linear reductions; invalid targets disable submission; loading and errors stay in the modal; retry works; output dimensions and download are real; cancel/Escape restore focus; keyboard tabs remain in the dialog; mobile content scrolls with accessible footer; HEIC/TIFF fallback still allows processing; repeat operations use the original. Recheck compression after Resize. These are manual browser workflow checks, separate from the automated calculation tests.
 
-See [Resize behavior/API](docs/en/architecture.md#image-resize).
+See [Resize behavior/API](architecture.md#image-resize).
 
 ## Conversion verification
 
@@ -220,3 +220,33 @@ The DOCX guide was structurally checked (XML, heading styles, 32 answers, two ta
 ## Architecture documentation review — 2026-10-05
 
 The existing Docker build stage was built under the temporary tag `portfolio-doc-review-go-tests`. A disposable container ran `go test -count=1 ./...` with CGO enabled, current backend mounted read-only, real fixture directory mounted read-only at `/testdata/images`, and networking disabled. All packages with tests passed, including native HEIF and real fixtures. The existing frontend runtime image ran the 12 calculation/preview-cache tests against read-only current source; all passed. The first frontend invocation had a duplicated `node` argument and exited before tests; the corrected invocation passed. No application stack, browser interaction, frontend build/TypeScript check, race or load test was run. Test containers and the temporary image tag were removed; existing fixtures were preserved. Build caches may remain in Docker.
+
+
+## Fixture inventory
+
+`storage/testdata/images` contains versioned real image fixtures for backend integration tests.
+
+These files are test inputs only. They are not application upload storage, compressed outputs, processing history, or user data. The application still processes uploads synchronously and returns processed bytes directly to the caller without persisting them under `storage`.
+
+Compressed test results must stay in memory or in Go test temporary paths such as `t.TempDir()`. Do not write generated outputs back into `storage/testdata/images`.
+
+
+## Physical sample inventory
+
+All nine versioned processing samples are static 512 × 512 images. Both HEIC/HEIF files use the same format family.
+
+| File | Bytes | Family |
+| --- | --- | --- |
+| [sample.avif](../../storage/testdata/images/sample.avif) | 4351 | avif |
+| [sample.bmp](../../storage/testdata/images/sample.bmp) | 1048714 | bmp |
+| [sample.gif](../../storage/testdata/images/sample.gif) | 11596 | gif |
+| [sample.heic](../../storage/testdata/images/sample.heic) | 6622 | heif |
+| [sample.heif](../../storage/testdata/images/sample.heif) | 8391 | heif |
+| [sample.jpg](../../storage/testdata/images/sample.jpg) | 30262 | jpeg |
+| [sample.png](../../storage/testdata/images/sample.png) | 24487 | png |
+| [sample.tiff](../../storage/testdata/images/sample.tiff) | 1048946 | tiff |
+| [sample.webp](../../storage/testdata/images/sample.webp) | 7432 | webp |
+
+Compression and preview already use all nine files. Resize covers four transformations per sample plus no-op byte preservation. Conversion covers nine sources × eight targets, including nine expected same-family errors. Outputs stay in memory, and the Docker mount is read-only.
+
+The four versioned UI assets in `frontend/public/images` (`branding/favicon.ico`, `branding/logo.png`, `hero/grassfield.png`, `hero/mountain.png`) are branding/background assets, not processing test samples; they are also unchanged.

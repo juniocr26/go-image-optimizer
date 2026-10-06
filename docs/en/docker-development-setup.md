@@ -99,4 +99,4 @@ done
 docker compose -f docker-compose.yml -f compose.development.yaml --profile dev run --rm --no-deps -T --entrypoint npm frontend-dev run build
 ```
 
-The .next generation command is repository-derived and was not executed in this audit. Back up custom settings before repairing configuration; the guarded Git loop only handles absent tracked files. The new development override and guide require a working-tree backup until committed.
+The .next generation command is repository-derived and was not executed in this audit. Back up custom settings before repairing configuration; the guarded Git loop only handles absent tracked files. Check tracking of the override and guide; preserve local edits in a working-tree backup.
