@@ -7,3 +7,9 @@ Não havia containers Docker rodando antes deste projeto. Com `-f docker-compose
 Serviços iniciados aqui foram parados com os mesmos arquivos e `--profile dev stop frontend-dev backend`. Volumes existentes, fixtures e código foram preservados. Next.js regenerou `next-env.d.ts`; o conteúdo versionado original foi restaurado após a parada e o novo arquivo TypeScript build-info não versionado foi removido. Pares de idiomas e links/âncoras locais conferidos.
 
 Smoke checks em container enviaram a fixture PNG existente para `/api/images/resize/info` e `/api/images/preview`: ambos HTTP 200. Inspeção informou 512 × 512, png, image/png e um frame; prévia devolveu 26.968 bytes. A saída permaneceu em memória.
+
+## Auditoria documental estática — 2026-10-09
+
+Revisados router, casos de uso, parsing Resize, limites, prévia/proxy, codecs nativos, manifestos/lockfile e testes representativos de fixtures. Corrigido default de axis vazio, reduzida duplicação do guia e acrescentados aprofundamentos/ordem de estudo. Testes, builds, codecs e navegador não foram executados; resultados anteriores são históricos.
+
+Checagens estáticas de links/âncoras, fences, pares de idioma e SHA-256 para alterações somente documentais estão na [revisão de entrevista](../../../tecnical-interview/docs/pt-BR/verification.md). Arquivos reais de ambiente e backups sensíveis não foram lidos/alterados.

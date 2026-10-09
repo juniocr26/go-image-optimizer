@@ -163,7 +163,7 @@ The inspection path validates and decodes the source, without re-encoding or sto
 | `keepAspectRatio` | `true` (default) or `false`; applies in pixels mode |
 | `reduction` | Required in percentage mode: `25`, `50`, or `75` |
 
-Booleans use literal `true`/`false`; explicitly empty values are rejected. Defaults apply when omitted. Duplicate option fields, extra files, and mixed file/text `image` fields are rejected. The UI serializes valid number inputs as decimal integers (including values entered using exponent notation). Percentage mode ignores width/height and always preserves proportions. The server recalculates targets from the uploaded source; a client cannot override the source dimensions. Resizing is always from the original input, not a previous result.
+`keepAspectRatio` accepts literal `true`/`false`; an explicitly empty value is rejected. An omitted or empty `axis` defaults to `width`; required numeric/mode fields still reject empty input. Other defaults apply as described above. Duplicate option fields, extra files, and mixed file/text `image` fields are rejected. The UI serializes valid number inputs as decimal integers (including values entered using exponent notation). Percentage mode ignores width/height and always preserves proportions. The server recalculates targets from the uploaded source; a client cannot override the source dimensions. Resizing is always from the original input, not a previous result.
 
 Success returns image bytes with:
 

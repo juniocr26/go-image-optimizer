@@ -163,7 +163,7 @@ A inspeção valida e decodifica a origem, sem recodificar nem persistir. As dim
 | `keepAspectRatio` | `true` (padrão) ou `false`; aplica-se ao modo pixels |
 | `reduction` | Obrigatório em percentage: `25`, `50` ou `75` |
 
-Booleanos usam literalmente `true`/`false`; valores explicitamente vazios são rejeitados. Os padrões valem quando o campo é omitido. Opções repetidas, arquivos adicionais e campos `image` misturando texto e arquivo são rejeitados. A interface envia números válidos como inteiros decimais, inclusive quando digitados em notação exponencial. Percentage ignora largura/altura e sempre preserva proporção. O servidor recalcula a saída a partir do arquivo enviado; dimensões de origem não são controladas pelo cliente. A operação sempre parte do original selecionado, nunca de um resultado anterior.
+`keepAspectRatio` aceita literalmente `true`/`false` e rejeita vazio explícito. `axis` omitido ou vazio usa `width`; campos numéricos/mode obrigatórios rejeitam vazio. Demais padrões seguem a tabela. Opções repetidas, arquivos adicionais e campos `image` misturando texto e arquivo são rejeitados. A interface envia números válidos como inteiros decimais, inclusive quando digitados em notação exponencial. Percentage ignora largura/altura e sempre preserva proporção. O servidor recalcula a saída a partir do arquivo enviado; dimensões de origem não são controladas pelo cliente. A operação sempre parte do original selecionado, nunca de um resultado anterior.
 
 A resposta de sucesso contém os bytes e:
 

@@ -1,6 +1,6 @@
 # Docker development setup and recovery
 
-Run all commands from the host `go-image-optimizer/` directory. Require Docker Engine/Desktop, Compose supporting multiple files and profiles (audit: v5.1.4), network access to npm/Go/Alpine registries, and adequate build memory. No host Go or npm is needed. The backend uses Go 1.27.1 Alpine with CGO; the frontend image uses the floating `node:24-alpine` tag. Exact installed frontend versions come from `frontend/package-lock.json`, not the ranges in package.json.
+Run all commands from the host `go-image-optimizer/` directory. Require Docker Engine/Desktop, Compose supporting multiple files and profiles (previous dependency audit: v5.1.4), network access to npm/Go/Alpine registries, and adequate build memory. No host Go or npm is needed. The backend uses Go 1.27.1 Alpine with CGO; the frontend image uses the floating `node:24-alpine` tag. Exact installed frontend versions come from `frontend/package-lock.json`, not the ranges in package.json.
 
 ## Services and startup behavior
 
