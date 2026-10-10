@@ -1,6 +1,6 @@
 # Docker
 
-[English](docker.md) | [Português](../pt-BR/docker.md)
+[English](runtime.md) | [Português](../../pt-BR/docker/runtime.md)
 
 The Docker setup runs the same synchronous, no-persistent-storage workflow as the local application.
 
@@ -39,7 +39,7 @@ The `storage/testdata/images` mount contains versioned real image fixtures used 
 
 ## Frontend Development with Docker
 
-Use [Docker development setup and dependency recovery](docker-development-setup.md) for the complete initial installation, host bind mounts, Go caches and safe shutdown workflow. `frontend-dev` now uses host `frontend/node_modules` and `frontend/.next`, rather than named volumes. Install with `npm ci` in the documented one-off setup container before starting the development server. Do not remove persistent volumes to recover dependencies.
+Use [Docker development setup and dependency recovery](development.md) for the complete initial installation, host bind mounts, Go caches and safe shutdown workflow. `frontend-dev` now uses host `frontend/node_modules` and `frontend/.next`, rather than named volumes. Install with `npm ci` in the documented one-off setup container before starting the development server. Do not remove persistent volumes to recover dependencies.
 
 ## Frontend Production Build Validation
 

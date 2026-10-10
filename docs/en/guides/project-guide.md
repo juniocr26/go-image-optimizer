@@ -1,6 +1,6 @@
 # Go Image Optimizer
 
-[English](guide.md) | [Português](../pt-BR/guide.md)
+[English](project-guide.md) | [Português](../../pt-BR/guides/project-guide.md)
 
 An image optimization application built with Go, with a web interface using Next.js, React, and Tailwind CSS.
 
@@ -63,10 +63,10 @@ Compression, resizing, conversion and preview fallback are implemented. There is
 
 ## Format conversion
 
-Choose a supported static file, inspect its byte-detected family, and select a different destination. Conversion preserves oriented dimensions, with format-specific alpha/metadata policies and measured output sizes; a larger result remains downloadable. Animations and unsupported multi-image variants are rejected. The [architecture](architecture.md#format-conversion) owns the field/header contract, encoder defaults and variant limits.
+Choose a supported static file, inspect its byte-detected family, and select a different destination. Conversion preserves oriented dimensions, with format-specific alpha/metadata policies and measured output sizes; a larger result remains downloadable. Animations and unsupported multi-image variants are rejected. The [architecture](../architecture/overview.md#format-conversion) owns the field/header contract, encoder defaults and variant limits.
 
 ## Image previews
 
-Native browser display is attempted first. On failure, a display-only static thumbnail from the backend can help without changing source/download bytes. Preview errors and retry remain local to the preview area. The session cache shares Blob-identity requests; reloading loses transient state. See [preview architecture](architecture.md#image-previews) for supported variants, resource limits and lifecycle details.
+Native browser display is attempted first. On failure, a display-only static thumbnail from the backend can help without changing source/download bytes. Preview errors and retry remain local to the preview area. The session cache shares Blob-identity requests; reloading loses transient state. See [preview architecture](../architecture/overview.md#image-previews) for supported variants, resource limits and lifecycle details.
 
-[Testing](testing.md) · [Docker](docker.md) · [Development setup and recovery](docker-development-setup.md) · [Verification](verification.md)
+[Testing](../testing/strategy.md) · [Docker](../docker/runtime.md) · [Development setup and recovery](../docker/development.md) · [Verification](../testing/verification.md)

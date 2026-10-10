@@ -12,4 +12,4 @@ Container smoke checks posted the existing PNG fixture through `/api/images/resi
 
 Rechecked the router, use cases, resize option parsing, resource limits, preview/proxy paths, native-codec configuration, manifests/lockfile and representative fixture tests. Corrected empty-axis default documentation, reduced duplicated operation detail in the project guide and added source-grounded interview follow-ups/study order. Tests, builds, native codecs and browser interactions were not executed. The older runtime results above remain historical.
 
-Static local-link/anchor, fence, language-pair and documentation-only SHA-256 checks are recorded in the shared [interview review](../../../tecnical-interview/docs/en/verification.md). Runtime environment files and secret-bearing backups were not read or modified.
+Static local-link/anchor, fence, language-pair and documentation-only SHA-256 checks are recorded in the shared [interview review](../../../../engineering-library/docs/en/testing/verification.md). Runtime environment files and secret-bearing backups were not read or modified.

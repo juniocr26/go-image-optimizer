@@ -1,6 +1,6 @@
 # Test Documentation
 
-[English](testing.md) | [Português](../pt-BR/testing.md)
+[English](strategy.md) | [Português](../../pt-BR/testing/strategy.md)
 
 This document describes the current testing strategy for Go Image Optimizer.
 
@@ -175,7 +175,7 @@ Then open the frontend, upload representative JPEG/JPG, PNG, WebP, AVIF, HEIC/HE
 
 UI checks for Resize: Run opens configuration without resizing; dimensions match orientation; editing either field updates the other; ratio unlock stretches; enlargement shows the detail note and matches downloaded dimensions; percentage labels show linear reductions; invalid targets disable submission; loading and errors stay in the modal; retry works; output dimensions and download are real; cancel/Escape restore focus; keyboard tabs remain in the dialog; mobile content scrolls with accessible footer; HEIC/TIFF fallback still allows processing; repeat operations use the original. Recheck compression after Resize. These are manual browser workflow checks, separate from the automated calculation tests.
 
-See [Resize behavior/API](architecture.md#image-resize).
+See [Resize behavior/API](../architecture/overview.md#image-resize).
 
 ## Conversion verification
 
@@ -237,15 +237,15 @@ All nine versioned processing samples are static 512 × 512 images. Both HEIC/HE
 
 | File | Bytes | Family |
 | --- | --- | --- |
-| [sample.avif](../../storage/testdata/images/sample.avif) | 4351 | avif |
-| [sample.bmp](../../storage/testdata/images/sample.bmp) | 1048714 | bmp |
-| [sample.gif](../../storage/testdata/images/sample.gif) | 11596 | gif |
-| [sample.heic](../../storage/testdata/images/sample.heic) | 6622 | heif |
-| [sample.heif](../../storage/testdata/images/sample.heif) | 8391 | heif |
-| [sample.jpg](../../storage/testdata/images/sample.jpg) | 30262 | jpeg |
-| [sample.png](../../storage/testdata/images/sample.png) | 24487 | png |
-| [sample.tiff](../../storage/testdata/images/sample.tiff) | 1048946 | tiff |
-| [sample.webp](../../storage/testdata/images/sample.webp) | 7432 | webp |
+| [sample.avif](../../../storage/testdata/images/sample.avif) | 4351 | avif |
+| [sample.bmp](../../../storage/testdata/images/sample.bmp) | 1048714 | bmp |
+| [sample.gif](../../../storage/testdata/images/sample.gif) | 11596 | gif |
+| [sample.heic](../../../storage/testdata/images/sample.heic) | 6622 | heif |
+| [sample.heif](../../../storage/testdata/images/sample.heif) | 8391 | heif |
+| [sample.jpg](../../../storage/testdata/images/sample.jpg) | 30262 | jpeg |
+| [sample.png](../../../storage/testdata/images/sample.png) | 24487 | png |
+| [sample.tiff](../../../storage/testdata/images/sample.tiff) | 1048946 | tiff |
+| [sample.webp](../../../storage/testdata/images/sample.webp) | 7432 | webp |
 
 Compression and preview already use all nine files. Resize covers four transformations per sample plus no-op byte preservation. Conversion covers nine sources × eight targets, including nine expected same-family errors. Outputs stay in memory, and the Docker mount is read-only.
 

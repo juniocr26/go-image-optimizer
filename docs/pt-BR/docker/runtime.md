@@ -1,6 +1,6 @@
 # Docker
 
-[English](../en/docker.md) | [Português](docker.md)
+[English](../../en/docker/runtime.md) | [Português](runtime.md)
 
 A configuração Docker executa o mesmo fluxo síncrono e sem armazenamento persistente da aplicação local.
 
@@ -39,7 +39,7 @@ O mount `storage/testdata/images` contém fixtures reais de imagem versionadas u
 
 ## Desenvolvimento do frontend com Docker
 
-Use [desenvolvimento Docker e recuperação](docker-development-setup.md) para instalação, binds do host, caches Go e parada segura. `frontend-dev` usa `frontend/node_modules` e `frontend/.next` no host, sem volumes nomeados. Instale com npm ci no container one-off documentado antes de iniciar; não remova volumes para recuperar dependências.
+Use [desenvolvimento Docker e recuperação](development.md) para instalação, binds do host, caches Go e parada segura. `frontend-dev` usa `frontend/node_modules` e `frontend/.next` no host, sem volumes nomeados. Instale com npm ci no container one-off documentado antes de iniciar; não remova volumes para recuperar dependências.
 
 ## Validação do build de produção do frontend
 

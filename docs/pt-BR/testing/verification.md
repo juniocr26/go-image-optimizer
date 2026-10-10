@@ -12,4 +12,4 @@ Smoke checks em container enviaram a fixture PNG existente para `/api/images/res
 
 Revisados router, casos de uso, parsing Resize, limites, prévia/proxy, codecs nativos, manifestos/lockfile e testes representativos de fixtures. Corrigido default de axis vazio, reduzida duplicação do guia e acrescentados aprofundamentos/ordem de estudo. Testes, builds, codecs e navegador não foram executados; resultados anteriores são históricos.
 
-Checagens estáticas de links/âncoras, fences, pares de idioma e SHA-256 para alterações somente documentais estão na [revisão de entrevista](../../../tecnical-interview/docs/pt-BR/verification.md). Arquivos reais de ambiente e backups sensíveis não foram lidos/alterados.
+Checagens estáticas de links/âncoras, fences, pares de idioma e SHA-256 para alterações somente documentais estão na [revisão de entrevista](../../../../engineering-library/docs/pt-BR/testing/verification.md). Arquivos reais de ambiente e backups sensíveis não foram lidos/alterados.

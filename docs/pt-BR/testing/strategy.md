@@ -1,6 +1,6 @@
 # Documentação de Testes
 
-[English](../en/testing.md) | [Português](testing.md)
+[English](../../en/testing/strategy.md) | [Português](strategy.md)
 
 Este documento descreve a estratégia atual de testes do Go Image Optimizer.
 
@@ -175,7 +175,7 @@ Depois, abra o frontend, envie amostras representativas de JPEG/JPG, PNG, WebP, 
 
 Validação de interface: Run abre a configuração sem executar Resize; dimensões consideram orientação; editar um campo atualiza o outro; destravar permite distorção; ampliação mostra a nota sobre detalhes e corresponde às dimensões baixadas; porcentagens indicam redução linear; valores inválidos impedem envio; loading/erros ficam no modal; retry funciona; dimensões/download são reais; cancelar/Escape restauram foco; Tab permanece no dialog; conteúdo mobile rola com rodapé acessível; fallback HEIC/TIFF permite processar; repetir parte do original. Revalidar compressão após Resize. São verificações manuais do fluxo no navegador, separadas dos testes automatizados de cálculo.
 
-Consulte [comportamento/API do Resize](architecture.md#redimensionamento-de-imagens).
+Consulte [comportamento/API do Resize](../architecture/overview.md#redimensionamento-de-imagens).
 
 ## Validação da conversão
 
@@ -241,15 +241,15 @@ As nove amostras versionadas de processamento são estáticas, com 512 × 512 pi
 
 | Arquivo | Bytes | Família |
 | --- | --- | --- |
-| [sample.avif](../../storage/testdata/images/sample.avif) | 4351 | avif |
-| [sample.bmp](../../storage/testdata/images/sample.bmp) | 1048714 | bmp |
-| [sample.gif](../../storage/testdata/images/sample.gif) | 11596 | gif |
-| [sample.heic](../../storage/testdata/images/sample.heic) | 6622 | heif |
-| [sample.heif](../../storage/testdata/images/sample.heif) | 8391 | heif |
-| [sample.jpg](../../storage/testdata/images/sample.jpg) | 30262 | jpeg |
-| [sample.png](../../storage/testdata/images/sample.png) | 24487 | png |
-| [sample.tiff](../../storage/testdata/images/sample.tiff) | 1048946 | tiff |
-| [sample.webp](../../storage/testdata/images/sample.webp) | 7432 | webp |
+| [sample.avif](../../../storage/testdata/images/sample.avif) | 4351 | avif |
+| [sample.bmp](../../../storage/testdata/images/sample.bmp) | 1048714 | bmp |
+| [sample.gif](../../../storage/testdata/images/sample.gif) | 11596 | gif |
+| [sample.heic](../../../storage/testdata/images/sample.heic) | 6622 | heif |
+| [sample.heif](../../../storage/testdata/images/sample.heif) | 8391 | heif |
+| [sample.jpg](../../../storage/testdata/images/sample.jpg) | 30262 | jpeg |
+| [sample.png](../../../storage/testdata/images/sample.png) | 24487 | png |
+| [sample.tiff](../../../storage/testdata/images/sample.tiff) | 1048946 | tiff |
+| [sample.webp](../../../storage/testdata/images/sample.webp) | 7432 | webp |
 
 Compressão e prévia já usam os nove arquivos. Resize verifica quatro transformações por amostra e bytes intactos sem mudança. Conversão verifica nove origens × oito destinos, incluindo nove erros esperados de mesma família. Saídas ficam em memória e a montagem Docker é somente leitura.
 

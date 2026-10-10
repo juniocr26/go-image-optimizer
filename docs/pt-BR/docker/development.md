@@ -43,7 +43,7 @@ docker compose -f docker-compose.yml -f compose.development.yaml --profile dev u
 docker compose -f docker-compose.yml -f compose.development.yaml --profile dev stop frontend-dev backend
 ```
 
-Não use `up` sem serviços com profile dev: isso seleciona frontend de produção também. Não há inicialização de banco. Não remova volumes nem execute pruning. Os comandos foram derivados do projeto; resultados atuais ficam em [verificação](verification.md).
+Não use `up` sem serviços com profile dev: isso seleciona frontend de produção também. Não há inicialização de banco. Não remova volumes nem execute pruning. Os comandos foram derivados do projeto; resultados atuais ficam em [verificação](../testing/verification.md).
 
 ## Recuperação de dependências e caches excluídos
 

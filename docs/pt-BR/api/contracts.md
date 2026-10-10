@@ -1,0 +1,13 @@
+# API de imagens e contrato do proxy
+
+[English](../../en/api/contracts.md) | [Português brasileiro](contracts.md)
+
+Revisão estática do código: 2026-10-10. Fatos implementados, teoria geral e mudanças hipotéticas são separados abaixo. Comandos runtime não foram executados.
+
+O router Go expõe `GET /health` e POSTs multipart `/images/compress`, `/images/resize/info`, `/images/resize`, `/images/convert/info`, `/images/convert` e `/images/preview`. O campo de arquivo é `image`. Rotas de inspeção retornam metadados da operação; rotas de processamento retornam bytes com tipo de mídia e metadados de download. Compressão conserva família e dimensões orientadas; resize altera dimensões nas famílias suportadas; conversão muda a família; preview fornece bytes de exibição separados do download. Variante não suportada não equivale a família não suportada.
+
+As rotas Next.js em `/api/images` usam uma função compartilhada de encaminhamento. O navegador envia multipart à mesma origem; o servidor reconstrói `FormData`, encaminha a `BACKEND_URL`, propaga o sinal de abortamento, lê o resultado bem-sucedido em `ArrayBuffer` e encaminha cabeçalhos de formato/dimensões/disposição com `Cache-Control: no-store`. Status/texto de erro do backend são devolvidos; exceções de encaminhamento viram JSON 502. Content-Type ausente assume octet-stream. O navegador não precisa do hostname do serviço Compose. Nenhum token de identidade é inserido; não é um gateway público com autorização ou controle de admissão.
+
+O handler de compressão Go limita o corpo inteiro a 50 MiB e usa 8 MiB como limiar multipart em memória antes de temporários. O proxy verifica `File.size` depois de interpretar multipart, portanto seu limite de arquivo de 50 MiB não é admissão por streaming nem equivale exatamente ao limite total do Go: o overhead multipart pode fazer um arquivo aparentemente permitido exceder o limite do backend. O processamento usa bytes reais, não o nome ou MIME do cliente. Erros compartilhados mapeiam entrada vazia/corrompida para 400, família não suportada para 415, excesso de recursos para 413, variante não suportada para 422 e falhas de codec/inesperadas para 500. Compressão tem mapeamento próprio; não se deve presumir que todos os handlers são idênticos com base em um helper.
+
+O resultado pode crescer. Redução de bytes é observação da UI, não contrato. JSON de inspeção e resultados binários compartilham o encaminhamento, então consumidores precisam respeitar Content-Type. Retry repete processamento caro; não há ID de job, histórico, chave de idempotência, resultado durável ou API de conclusão assíncrona.

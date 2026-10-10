@@ -1,6 +1,6 @@
 # Go Image Optimizer
 
-[English](../en/guide.md) | [Português](guide.md)
+[English](../../en/guides/project-guide.md) | [Português](project-guide.md)
 
 Aplicação para otimização de imagens desenvolvida em Go, com uma interface web utilizando Next.js, React e Tailwind CSS.
 
@@ -67,10 +67,10 @@ Este projeto é licenciado sob a MIT License. Consulte o arquivo `LICENSE` para 
 
 ## Conversão de formatos
 
-Escolha arquivo estático suportado, inspecione a família detectada pelos bytes e selecione destino diferente. Conversão preserva dimensões orientadas, com políticas de alpha/metadados por formato e tamanhos reais; resultado maior continua disponível. Animações e variantes multi-imagem não suportadas são rejeitadas. A [arquitetura](architecture.md#conversão-de-formatos) mantém contrato de campos/headers, defaults e limites.
+Escolha arquivo estático suportado, inspecione a família detectada pelos bytes e selecione destino diferente. Conversão preserva dimensões orientadas, com políticas de alpha/metadados por formato e tamanhos reais; resultado maior continua disponível. Animações e variantes multi-imagem não suportadas são rejeitadas. A [arquitetura](../architecture/overview.md#conversão-de-formatos) mantém contrato de campos/headers, defaults e limites.
 
 ## Prévias de imagens
 
-Tenta exibição nativa primeiro. Se falhar, thumbnail estático somente para display ajuda sem trocar bytes do original/download. Erro/retry ficam na área de prévia. Cache de sessão compartilha requisições pela identidade do Blob; reload perde estado temporário. Veja [arquitetura de prévias](architecture.md#prévias-de-imagens) para variantes, recursos e ciclo de vida.
+Tenta exibição nativa primeiro. Se falhar, thumbnail estático somente para display ajuda sem trocar bytes do original/download. Erro/retry ficam na área de prévia. Cache de sessão compartilha requisições pela identidade do Blob; reload perde estado temporário. Veja [arquitetura de prévias](../architecture/overview.md#prévias-de-imagens) para variantes, recursos e ciclo de vida.
 
-[Testes](testing.md) · [Docker](docker.md) · [Desenvolvimento e recuperação](docker-development-setup.md) · [Verificação](verification.md)
+[Testes](../testing/strategy.md) · [Docker](../docker/runtime.md) · [Desenvolvimento e recuperação](../docker/development.md) · [Verificação](../testing/verification.md)

@@ -1,6 +1,6 @@
 # Architecture
 
-[English](architecture.md) | [Português](../pt-BR/architecture.md)
+[English](overview.md) | [Português](../../pt-BR/architecture/overview.md)
 
 This document describes the current architecture, trade-offs, and completed functional scope of the Go Image Optimizer.
 
@@ -187,7 +187,7 @@ Same-origin Next.js routes are `/api/images/resize/info` and `/api/images/resize
 - If effective dimensions equal the original display dimensions, the original encoded bytes are returned unchanged, retaining their metadata and avoiding unnecessary lossy encoding.
 - Otherwise, current encoder settings match the existing compression defaults (JPEG/WebP 82, AVIF/HEIF 60; PNG best compression; TIFF Deflate). A resized output may be larger in bytes. Resize does not crop, convert formats, process batches or enhance detail. Conversion is a separate operation; history and percentage progress are outside the current scope.
 
-See [Test documentation](testing.md) for automated coverage and UI validation.
+See [Test documentation](../testing/strategy.md) for automated coverage and UI validation.
 
 ## 6. File Lifecycle and Storage
 
@@ -253,7 +253,7 @@ The `backend-test` Compose service is a local test/development convenience, not 
 
 HEIC/HEIF support requires native libheif and HEVC codec plugins in Docker. The backend image therefore uses a CGO-enabled Alpine build and an Alpine runtime with libheif packages instead of a fully static distroless image.
 
-See [ADR 001: Native Image Codecs](adr/001-native-image-codecs.md) and [Docker](docker.md).
+See [ADR 001: Native Image Codecs](../adr/001-native-image-codecs.md) and [Docker](../docker/runtime.md).
 
 ## 11. Current Limitations
 
@@ -340,7 +340,7 @@ The Technical Interview guide confirms Go as a deliberate learning project and t
 
 **Revisit when.** Profiling identifies a codec bottleneck, measured concurrency needs admission control, or native decoding requires process isolation.
 
-**Evidence:** [router](../../backend/internal/infrastructure/http/router.go), [application contracts](../../backend/internal/application), [dependencies](../../backend/go.mod).
+**Evidence:** [router](../../../backend/internal/infrastructure/http/router.go), [application contracts](../../../backend/internal/application), [dependencies](../../../backend/go.mod).
 
 ### Decision: React interaction behind a same-origin Next.js proxy
 
@@ -352,7 +352,7 @@ The Technical Interview guide confirms Go as a deliberate learning project and t
 
 **Revisit when.** Large uploads or concurrent transfers make buffering costly, or another client needs a direct Go API contract.
 
-**Evidence:** [proxy](../../frontend/app/api/images/forward-image-request.ts), [upload state](../../frontend/app/components/image-upload/image-upload-form.tsx), [settings shell](../../frontend/app/components/image-upload/image-settings-dialog.tsx).
+**Evidence:** [proxy](../../../frontend/app/api/images/forward-image-request.ts), [upload state](../../../frontend/app/components/image-upload/image-upload-form.tsx), [settings shell](../../../frontend/app/components/image-upload/image-settings-dialog.tsx).
 
 ### Decision: Synchronous, ephemeral results without server history
 
@@ -364,7 +364,7 @@ The Technical Interview guide confirms Go as a deliberate learning project and t
 
 **Revisit when.** A concrete product requirement needs long-running jobs, batch processing or retrieval after reload; measure duration/resources and specify retention/recovery before adopting a queue/store.
 
-**Evidence:** [HEIF helper](../../backend/internal/infrastructure/imaging/heif.go), [server timeouts](../../backend/internal/infrastructure/http/server.go), [compression use case](../../backend/internal/application/imagecompression/usecase.go), [conversion use case](../../backend/internal/application/imageconversion/usecase.go).
+**Evidence:** [HEIF helper](../../../backend/internal/infrastructure/imaging/heif.go), [server timeouts](../../../backend/internal/infrastructure/http/server.go), [compression use case](../../../backend/internal/application/imagecompression/usecase.go), [conversion use case](../../../backend/internal/application/imageconversion/usecase.go).
 
 ### Decision: Validate actual bytes and bound work, without claiming sandboxing
 
@@ -376,19 +376,19 @@ The Technical Interview guide confirms Go as a deliberate learning project and t
 
 **Revisit when.** Untrusted public traffic, concurrent large images or strict resource isolation becomes a requirement.
 
-**Evidence:** [detection](../../backend/internal/infrastructure/imaging/detection.go), [limits](../../backend/internal/infrastructure/imaging/limits.go), [HTTP handlers](../../backend/internal/infrastructure/http/handler), [Compose](../../docker-compose.yml).
+**Evidence:** [detection](../../../backend/internal/infrastructure/imaging/detection.go), [limits](../../../backend/internal/infrastructure/imaging/limits.go), [HTTP handlers](../../../backend/internal/infrastructure/http/handler), [Compose](../../../docker-compose.yml).
 
 ### Decision: Explicit format policies and real native HEIF support
 
 **Context and decision.** Compression retains family/dimensions; Resize changes dimensions; conversion changes family. Codec defaults, orientation, alpha and variant restrictions define different outcomes, rather than promising every format behaves identically. Same-size Resize returns original bytes. Unsupported conversion/preview animations are rejected rather than silently flattened.
 
-**Why and alternatives.** Fixed defaults keep the UI focused; a quality/metadata editor would widen scope. Reusing the Resize decoder and HEIF helpers keeps common behavior together, while operation-specific encoding remains separate. Native libheif/HEVC provides real HEIC support; dropping HEIF would allow a simpler native dependency chain. See [ADR 001](adr/001-native-image-codecs.md).
+**Why and alternatives.** Fixed defaults keep the UI focused; a quality/metadata editor would widen scope. Reusing the Resize decoder and HEIF helpers keeps common behavior together, while operation-specific encoding remains separate. Native libheif/HEVC provides real HEIC support; dropping HEIF would allow a simpler native dependency chain. See [ADR 001](../adr/001-native-image-codecs.md).
 
 **Trade-offs and consequences.** CGO requires compiler/headers in build and libheif/plugins at runtime; the container cannot be assumed fully static. Lossy re-encoding can lose detail, and metadata/ICC are not universally copied. Catmull–Rom changes pixels and cannot create missing detail. Actual result bytes may increase; UI metrics report increase/no change as well as reduction. Containerized native tests plus independently decoded synthetic/real fixtures test format, dimensions, alpha, orientation and timing, not universal compatibility or visual quality. There is no checked-in browser interaction suite; frontend calculation/cache tests do not prove focus or cross-browser rendering.
 
 **Revisit when.** Requirements change to color fidelity, broader variants, fully static deployment or different encoding controls. First define representative fixtures and quality/resource measurements.
 
-**Evidence:** [native ADR](adr/001-native-image-codecs.md), [conversion encoder](../../backend/internal/infrastructure/imaging/convert/processor.go), [test guide](testing.md).
+**Evidence:** [native ADR](../adr/001-native-image-codecs.md), [conversion encoder](../../../backend/internal/infrastructure/imaging/convert/processor.go), [test guide](../testing/strategy.md).
 
 ### Decision: Native browser previews before display-only backend fallback
 
@@ -400,4 +400,4 @@ The Technical Interview guide confirms Go as a deliberate learning project and t
 
 **Revisit when.** Preview traffic or browser memory is measurably problematic, or animated fallback becomes an explicit requirement.
 
-**Evidence:** [cache](../../frontend/app/components/image-upload/preview-cache.ts), [preview component](../../frontend/app/components/image-upload/browser-image-preview.tsx), [preview processor](../../backend/internal/infrastructure/imaging/convert/preview.go).
+**Evidence:** [cache](../../../frontend/app/components/image-upload/preview-cache.ts), [preview component](../../../frontend/app/components/image-upload/browser-image-preview.tsx), [preview processor](../../../backend/internal/infrastructure/imaging/convert/preview.go).
