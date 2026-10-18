@@ -56,3 +56,7 @@ Authentication, authorization, data and resource boundaries.
 - [Resource and native-code boundaries](security/resource-boundaries.md)
 
 Category applicability and omissions are justified in the [completion checklist](operations/completion-checklist.md). No empty category is created.
+
+## Practical implementation and interview path
+
+[Trace a request, inspect failure boundaries and rehearse answers](guides/implementation-study.md).

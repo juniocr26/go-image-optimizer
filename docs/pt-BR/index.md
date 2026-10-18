@@ -56,3 +56,7 @@ Autenticação, autorização, dados e recursos.
 - [Limites de recursos e código nativo](security/resource-boundaries.md)
 
 Aplicabilidade e omissões estão justificadas no [checklist](operations/completion-checklist.md). Não há categorias vazias.
+
+## Roteiro prático de implementação e entrevista
+
+[Acompanhe uma requisição, examine falhas e pratique respostas](guides/implementation-study.md).

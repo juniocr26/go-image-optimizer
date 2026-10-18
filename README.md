@@ -22,3 +22,15 @@ Read purpose/setup first, then architecture and contracts, security and failures
 - [Validation results](docs/en/testing/verification.md)
 
 [License](LICENSE)
+
+## Quick start and scope
+
+Install Docker with Compose v2, then run from this repository:
+
+```sh
+docker compose up --build backend frontend
+```
+
+UI: http://localhost:3000; API: http://localhost:8080. Native codecs are built by the Dockerfiles. There is no database or persistent upload history.
+
+[Installation, execution flow, operational limits and project interview](docs/en/guides/implementation-study.md). Commands are guidance; this documentation maintenance ran no application tests.

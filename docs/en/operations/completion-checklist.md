@@ -1,3 +1,20 @@
+# Documentation maintenance — 2026-10-18
+
+Baseline `2c9a27f40a2a2c8bef5f86f187256870c1960630`; initially clean worktree. This is static documentation maintenance. Historical test counts below belong to their original date/revision and were not rerun.
+
+- [x] Inventory/source review
+- [x] Structure and implementation content
+- [x] Equivalent English/Portuguese coverage
+- [x] Navigation and local links
+- [x] Project interview and Engineering Library coverage
+- [x] Evidence gaps and justified exceptions
+
+[Current source review and evidence limits](../guides/implementation-study.md).
+
+Completion concerns documentation coverage, not production readiness, runtime certification or closure of evidence gaps. Validator results are recorded in the library review.
+
+## Historical checklists (original dates and scope)
+
 # go-image-optimizer: Repository completion checklist
 
 Static review on 2026-10-10; no runtime execution. Checked items describe completed documentation work, not completed application features or closed evidence gaps.

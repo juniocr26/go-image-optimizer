@@ -22,3 +22,15 @@ Leia propósito/setup, arquitetura e contratos, segurança/falhas, testes/evidê
 - [Resultados de validação](docs/pt-BR/testing/verification.md)
 
 [Licença](LICENSE)
+
+## Início rápido e escopo
+
+Instale Docker com Compose v2 e execute neste repositório:
+
+```sh
+docker compose up --build backend frontend
+```
+
+UI: http://localhost:3000; API: http://localhost:8080. Dockerfiles constroem codecs nativos. Não há banco ou histórico persistente de uploads.
+
+[Instalação, fluxo de execução, limites operacionais e entrevista do projeto](docs/pt-BR/guides/implementation-study.md). Comandos são orientação; esta manutenção documental não executou testes da aplicação.
