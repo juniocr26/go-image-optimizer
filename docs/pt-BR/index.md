@@ -27,7 +27,7 @@ Setup, pré-requisitos e procedimentos de leitura.
 Estratégia, inventários e evidências datadas.
 
 - [Documentação de Testes](../pt-br/testing/strategy.md)
-- [Validação documental — 2026-10-06](../../../engineering-library/docs/pt-br/projects/engineering-library/docs/pt-br/testing/documentation.md)
+- [Validação documental — 2026-10-06](../../../engineering-library/docs/engineering-library/pt-br/testing/documentation.md)
 
 ## docker
 

@@ -69,4 +69,4 @@ Choose a supported static file, inspect its byte-detected family, and select a d
 
 Native browser display is attempted first. On failure, a display-only static thumbnail from the backend can help without changing source/download bytes. Preview errors and retry remain local to the preview area. The session cache shares Blob-identity requests; reloading loses transient state. See [preview architecture](../architecture/overview.md#image-previews) for supported variants, resource limits and lifecycle details.
 
-[Testing](../testing/strategy.md) · [Docker](../docker/runtime.md) · [Development setup and recovery](../docker/development.md) · [Verification](../../../../engineering-library/docs/en/projects/engineering-library/docs/en/testing/documentation.md)
+[Testing](../testing/strategy.md) · [Docker](../docker/runtime.md) · [Development setup and recovery](../docker/development.md) · [Verification](../../../../engineering-library/docs/engineering-library/en/testing/documentation.md)

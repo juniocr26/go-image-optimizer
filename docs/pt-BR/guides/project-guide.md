@@ -73,4 +73,4 @@ Escolha arquivo estático suportado, inspecione a família detectada pelos bytes
 
 Tenta exibição nativa primeiro. Se falhar, thumbnail estático somente para display ajuda sem trocar bytes do original/download. Erro/retry ficam na área de prévia. Cache de sessão compartilha requisições pela identidade do Blob; reload perde estado temporário. Veja [arquitetura de prévias](../../pt-br/architecture/overview.md#prévias-de-imagens) para variantes, recursos e ciclo de vida.
 
-[Testes](../../pt-br/testing/strategy.md) · [Docker](../../pt-br/docker/runtime.md) · [Desenvolvimento e recuperação](../../pt-br/docker/development.md) · [Verificação](../../../../engineering-library/docs/pt-br/projects/engineering-library/docs/pt-br/testing/documentation.md)
+[Testes](../../pt-br/testing/strategy.md) · [Docker](../../pt-br/docker/runtime.md) · [Desenvolvimento e recuperação](../../pt-br/docker/development.md) · [Verificação](../../../../engineering-library/docs/engineering-library/pt-br/testing/documentation.md)

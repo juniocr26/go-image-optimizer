@@ -40,7 +40,7 @@ Revisão estática em 2026-10-10; sem execução runtime. Itens marcados indicam
 
 Compressão/resize/conversão/preview; interfaces/CGO; multipart/API/proxy; pixels, formatos, alpha/orientação/animação; cleanup/cancelamento; testes, recursos e limites de rollout.
 
-[Self-contained dossier / Dossiê](../../../../engineering-library/docs/pt-br/projects/go-image-optimizer/docs/pt-br/architecture/overview.md) | [Interview / Entrevista](../../../../engineering-library/docs/pt-br/projects/go-image-optimizer/docs/pt-br/faq/index.md)
+[Self-contained dossier / Dossiê](../../../../engineering-library/docs/go-image-optimizer/pt-br/architecture/overview.md) | [Interview / Entrevista](../../../../engineering-library/docs/go-image-optimizer/pt-br/faq/index.md)
 
 ## Aplicabilidade das categorias
 

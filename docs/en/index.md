@@ -27,7 +27,7 @@ Setup, prerequisites and reading procedures.
 Test strategy, inventories and dated evidence.
 
 - [Test Documentation](testing/strategy.md)
-- [Documentation validation — 2026-10-06](../../../engineering-library/docs/en/projects/engineering-library/docs/en/testing/documentation.md)
+- [Documentation validation — 2026-10-06](../../../engineering-library/docs/engineering-library/en/testing/documentation.md)
 
 ## docker
 
