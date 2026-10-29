@@ -1,6 +1,6 @@
 # Limites de recursos e código nativo
 
-[English](../../en/security/resource-boundaries.md) | [Português brasileiro](resource-boundaries.md)
+[English](../../en/security/resource-boundaries.md) | [Português brasileiro](../../pt-br/security/resource-boundaries.md)
 
 Revisão estática do código: 2026-10-10. Fatos implementados, teoria geral e mudanças hipotéticas são separados abaixo. Comandos runtime não foram executados.
 

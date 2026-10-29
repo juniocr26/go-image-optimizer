@@ -1,6 +1,6 @@
 # Docker
 
-[English](runtime.md) | [Português](../../pt-BR/docker/runtime.md)
+[English](runtime.md) | [Português](../../pt-br/docker/runtime.md)
 
 The Docker setup runs the same synchronous, no-persistent-storage workflow as the local application.
 

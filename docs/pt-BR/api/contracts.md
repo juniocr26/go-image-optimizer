@@ -1,6 +1,6 @@
 # API de imagens e contrato do proxy
 
-[English](../../en/api/contracts.md) | [Português brasileiro](contracts.md)
+[English](../../en/api/contracts.md) | [Português brasileiro](../../pt-br/api/contracts.md)
 
 Revisão estática do código: 2026-10-10. Fatos implementados, teoria geral e mudanças hipotéticas são separados abaixo. Comandos runtime não foram executados.
 

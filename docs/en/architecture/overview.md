@@ -1,6 +1,12 @@
 # Architecture
 
-[English](overview.md) | [Português](../../pt-BR/architecture/overview.md)
+## Current source responsibilities — 2026-10-29
+
+HTTP handlers compose dedicated compression, resize and conversion use cases with imaging implementations. The router also exposes health, inspection and preview endpoints. Requests process bytes synchronously; the Compose test service mounts storage/testdata/images read-only. These are executable test fixtures, so they remain in storage.
+
+[Source inspected](../../../backend/internal/infrastructure/http/router.go). No application runtime check or test execution is implied. Historical results below were not rerun.
+
+[English](overview.md) | [Português](../../pt-br/architecture/overview.md)
 
 This document describes the current architecture, trade-offs, and completed functional scope of the Go Image Optimizer.
 

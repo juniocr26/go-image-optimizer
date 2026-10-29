@@ -1,6 +1,6 @@
 # Implantação, diagnóstico e evidência
 
-[English](../../en/operations/deployment-and-diagnosis.md) | [Português brasileiro](deployment-and-diagnosis.md)
+[English](../../en/operations/deployment-and-diagnosis.md) | [Português brasileiro](../../pt-br/operations/deployment-and-diagnosis.md)
 
 Revisão estática do código: 2026-10-10. Fatos implementados, teoria geral e mudanças hipotéticas são separados abaixo. Comandos runtime não foram executados.
 

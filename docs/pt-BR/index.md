@@ -8,55 +8,57 @@ Percurso: propósito/setup → arquitetura/contratos → segurança/falhas → t
 
 Componentes, fluxos e fronteiras implementadas.
 
-- [Arquitetura](architecture/overview.md)
+- [Arquitetura](../pt-br/architecture/overview.md)
 
 ## adr
 
 Decisões e consequências; IDs/histórico preservados.
 
-- [ADR 001: Codecs nativos de imagem](adr/001-native-image-codecs.md)
+- [ADR 001: Codecs nativos de imagem](../pt-br/adr/001-native-image-codecs.md)
 
 ## guides
 
 Setup, pré-requisitos e procedimentos de leitura.
 
-- [Go Image Optimizer](guides/project-guide.md)
+- [Go Image Optimizer](../pt-br/guides/project-guide.md)
 
 ## testing
 
 Estratégia, inventários e evidências datadas.
 
-- [Documentação de Testes](testing/strategy.md)
-- [Validação documental — 2026-10-06](testing/verification.md)
+- [Documentação de Testes](../pt-br/testing/strategy.md)
+- [Validação documental — 2026-10-06](../../../engineering-library/docs/pt-br/projects/engineering-library/docs/pt-br/testing/documentation.md)
 
 ## docker
 
 Imagens, serviços, mounts e configuração local.
 
-- [Desenvolvimento Docker e recuperação](docker/development.md)
-- [Docker](docker/runtime.md)
+- [Desenvolvimento Docker e recuperação](../pt-br/docker/development.md)
+- [Docker](../pt-br/docker/runtime.md)
 
 ## api
 
 Contratos expostos e comportamento de clientes.
 
-- [API de imagens e contrato do proxy](api/contracts.md)
+- [API de imagens e contrato do proxy](../pt-br/api/contracts.md)
 
 ## operations
 
 Diagnóstico, recuperação, checklists e registros históricos.
 
-- [go-image-optimizer: Checklist de conclusão do repositório](operations/completion-checklist.md)
-- [Implantação, diagnóstico e evidência](operations/deployment-and-diagnosis.md)
+- [go-image-optimizer: Checklist de conclusão do repositório](../pt-br/operations/completion-checklist.md)
+- [Implantação, diagnóstico e evidência](../pt-br/operations/deployment-and-diagnosis.md)
 
 ## security
 
 Autenticação, autorização, dados e recursos.
 
-- [Limites de recursos e código nativo](security/resource-boundaries.md)
+- [Limites de recursos e código nativo](../pt-br/security/resource-boundaries.md)
 
-Aplicabilidade e omissões estão justificadas no [checklist](operations/completion-checklist.md). Não há categorias vazias.
+Aplicabilidade e omissões estão justificadas no [checklist](../pt-br/operations/completion-checklist.md). Não há categorias vazias.
 
 ## Roteiro prático de implementação e entrevista
 
-[Acompanhe uma requisição, examine falhas e pratique respostas](guides/implementation-study.md).
+[Acompanhe uma requisição, examine falhas e pratique respostas](../pt-br/guides/implementation-study.md).
+
+- [Validação documental — 2026-10-06](testing/verification.md)

@@ -1,6 +1,6 @@
 # ADR 001: Native Image Codecs
 
-[English](001-native-image-codecs.md) | [Português](../../pt-BR/adr/001-native-image-codecs.md)
+[English](001-native-image-codecs.md) | [Português](../../pt-br/adr/001-native-image-codecs.md)
 
 ## Status
 

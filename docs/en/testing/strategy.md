@@ -1,6 +1,8 @@
+> 2026-10-29: source inspection included [usecase_test.go](../../../backend/internal/application/imagecompression/usecase_test.go). The cases were inspected, not executed. Dated results elsewhere are historical; no new coverage or runtime success is claimed.
+
 # Test Documentation
 
-[English](strategy.md) | [Português](../../pt-BR/testing/strategy.md)
+[English](strategy.md) | [Português](../../pt-br/testing/strategy.md)
 
 This document describes the current testing strategy for Go Image Optimizer.
 

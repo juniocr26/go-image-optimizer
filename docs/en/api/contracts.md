@@ -1,6 +1,6 @@
 # Image API and proxy contract
 
-[English](contracts.md) | [Português brasileiro](../../pt-BR/api/contracts.md)
+[English](contracts.md) | [Português brasileiro](../../pt-br/api/contracts.md)
 
 Static source review: 2026-10-10. Implemented facts, general theory and hypothetical changes are distinguished below. Runtime commands were not executed.
 

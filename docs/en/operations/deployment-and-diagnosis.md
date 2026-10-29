@@ -1,6 +1,6 @@
 # Deployment, diagnostics and evidence
 
-[English](deployment-and-diagnosis.md) | [Português brasileiro](../../pt-BR/operations/deployment-and-diagnosis.md)
+[English](deployment-and-diagnosis.md) | [Português brasileiro](../../pt-br/operations/deployment-and-diagnosis.md)
 
 Static source review: 2026-10-10. Implemented facts, general theory and hypothetical changes are distinguished below. Runtime commands were not executed.
 

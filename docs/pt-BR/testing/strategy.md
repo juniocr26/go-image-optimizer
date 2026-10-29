@@ -1,6 +1,8 @@
+> 29/10/2026: a inspeção de código incluiu [usecase_test.go](../../../backend/internal/application/imagecompression/usecase_test.go). Os casos foram inspecionados, não executados. Resultados datados em outras páginas são históricos; não há nova alegação de cobertura ou sucesso em execução.
+
 # Documentação de Testes
 
-[English](../../en/testing/strategy.md) | [Português](strategy.md)
+[English](../../en/testing/strategy.md) | [Português](../../pt-br/testing/strategy.md)
 
 Este documento descreve a estratégia atual de testes do Go Image Optimizer.
 
@@ -175,7 +177,7 @@ Depois, abra o frontend, envie amostras representativas de JPEG/JPG, PNG, WebP, 
 
 Validação de interface: Run abre a configuração sem executar Resize; dimensões consideram orientação; editar um campo atualiza o outro; destravar permite distorção; ampliação mostra a nota sobre detalhes e corresponde às dimensões baixadas; porcentagens indicam redução linear; valores inválidos impedem envio; loading/erros ficam no modal; retry funciona; dimensões/download são reais; cancelar/Escape restauram foco; Tab permanece no dialog; conteúdo mobile rola com rodapé acessível; fallback HEIC/TIFF permite processar; repetir parte do original. Revalidar compressão após Resize. São verificações manuais do fluxo no navegador, separadas dos testes automatizados de cálculo.
 
-Consulte [comportamento/API do Resize](../architecture/overview.md#redimensionamento-de-imagens).
+Consulte [comportamento/API do Resize](../../pt-br/architecture/overview.md#redimensionamento-de-imagens).
 
 ## Validação da conversão
 

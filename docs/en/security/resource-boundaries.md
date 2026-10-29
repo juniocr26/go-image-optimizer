@@ -1,6 +1,6 @@
 # Resource and native-code boundaries
 
-[English](resource-boundaries.md) | [Português brasileiro](../../pt-BR/security/resource-boundaries.md)
+[English](resource-boundaries.md) | [Português brasileiro](../../pt-br/security/resource-boundaries.md)
 
 Static source review: 2026-10-10. Implemented facts, general theory and hypothetical changes are distinguished below. Runtime commands were not executed.
 

@@ -9,7 +9,7 @@ Base `2c9a27f40a2a2c8bef5f86f187256870c1960630`; árvore inicialmente limpa. Est
 - [x] Entrevista do projeto e cobertura na Engineering Library
 - [x] Lacunas de evidência e exceções justificadas
 
-[Revisão atual e limites de evidência](../guides/implementation-study.md).
+[Revisão atual e limites de evidência](../../pt-br/guides/implementation-study.md).
 
 A conclusão diz respeito à cobertura documental, não à prontidão de produção, certificação de runtime ou resolução das lacunas de evidência. Resultados do validador estão na revisão da biblioteca.
 
@@ -40,7 +40,7 @@ Revisão estática em 2026-10-10; sem execução runtime. Itens marcados indicam
 
 Compressão/resize/conversão/preview; interfaces/CGO; multipart/API/proxy; pixels, formatos, alpha/orientação/animação; cleanup/cancelamento; testes, recursos e limites de rollout.
 
-[Self-contained dossier / Dossiê](../../../../engineering-library/docs/pt-BR/architecture/go-image-optimizer.md) | [Interview / Entrevista](../../../../engineering-library/docs/pt-BR/interviews/go-image-optimizer.md)
+[Self-contained dossier / Dossiê](../../../../engineering-library/docs/pt-br/projects/go-image-optimizer/docs/pt-br/architecture/overview.md) | [Interview / Entrevista](../../../../engineering-library/docs/pt-br/projects/go-image-optimizer/docs/pt-br/faq/index.md)
 
 ## Aplicabilidade das categorias
 

@@ -1,6 +1,12 @@
 # Arquitetura
 
-[English](../../en/architecture/overview.md) | [Português](overview.md)
+## Responsabilidades no código atual — 29/10/2026
+
+Os handlers HTTP compõem casos de uso específicos de compressão, redimensionamento e conversão com implementações de imagem. O roteador também expõe saúde, inspeção e prévia. As requisições processam bytes de forma síncrona; o serviço de testes do Compose monta storage/testdata/images somente para leitura. São fixtures executáveis e permanecem em storage.
+
+[Código inspecionado](../../../backend/internal/infrastructure/http/router.go). Não implica verificação da aplicação em execução ou execução de testes. Resultados históricos abaixo não foram reexecutados.
+
+[English](../../en/architecture/overview.md) | [Português](../../pt-br/architecture/overview.md)
 
 Este documento descreve a arquitetura atual, os trade-offs e o escopo funcional concluído do Go Image Optimizer.
 
@@ -187,7 +193,7 @@ As rotas de mesma origem no Next.js são `/api/images/resize/info` e `/api/image
 - Se as dimensões efetivas forem iguais às originais de exibição, os bytes originais são devolvidos intactos, preservando metadados e evitando recodificação com perda desnecessária.
 - Nos demais casos, os parâmetros de encode acompanham os padrões existentes (JPEG/WebP 82, AVIF/HEIF 60; PNG best compression; TIFF Deflate). O resultado pode ser maior em bytes. Resize não recorta, converte formatos, processa lotes nem melhora detalhes. Conversão é outra operação; histórico e progresso percentual estão fora do escopo atual.
 
-Consulte a [documentação de testes](../testing/strategy.md) para cobertura automatizada e validação da interface.
+Consulte a [documentação de testes](../../pt-br/testing/strategy.md) para cobertura automatizada e validação da interface.
 
 ## 6. Ciclo de vida dos arquivos e armazenamento
 
@@ -253,7 +259,7 @@ O serviço Compose `backend-test` é uma conveniência local de teste/desenvolvi
 
 O suporte a HEIC/HEIF exige libheif nativa e plugins de codec HEVC no Docker. Por isso, a imagem do backend usa build Alpine com CGO habilitado e runtime Alpine com pacotes libheif, em vez de uma imagem distroless totalmente estática.
 
-Consulte [ADR 001: Codecs nativos de imagem](../adr/001-native-image-codecs.md) e [Docker](../docker/runtime.md).
+Consulte [ADR 001: Codecs nativos de imagem](../../pt-br/adr/001-native-image-codecs.md) e [Docker](../../pt-br/docker/runtime.md).
 
 ## 11. Limitações atuais
 
@@ -382,13 +388,13 @@ O guia Technical Interview confirma aprendizado deliberado de Go e escopo conclu
 
 **Contexto e decisão.** Compression preserva família/dimensões; Resize altera dimensões; conversão altera família. Defaults/orientação/alpha/variantes têm resultados distintos. Resize sem mudança retorna bytes originais. Conversão/prévia rejeitam animações em vez de achatá-las silenciosamente.
 
-**Justificativa e alternativas.** Defaults fixos mantêm foco; editor de qualidade/metadados amplia escopo. Decoder Resize/helpers HEIF reutilizam comportamento comum; encoding é específico por operação. libheif/HEVC fornece HEIC real; remover HEIF simplifica dependências nativas. Veja [ADR 001](../adr/001-native-image-codecs.md).
+**Justificativa e alternativas.** Defaults fixos mantêm foco; editor de qualidade/metadados amplia escopo. Decoder Resize/helpers HEIF reutilizam comportamento comum; encoding é específico por operação. libheif/HEVC fornece HEIC real; remover HEIF simplifica dependências nativas. Veja [ADR 001](../../pt-br/adr/001-native-image-codecs.md).
 
 **Trade-offs e consequências.** CGO exige compilador/headers build e libheif/plugins runtime; não presumir binário totalmente estático. Encoding lossy perde detalhe e não copia EXIF/ICC universalmente. Catmull–Rom muda pixels e não cria detalhe ausente. Bytes podem aumentar; UI reporta aumento/igualdade/redução. Testes nativos containerizados com fixtures sintéticas/reais e decode independente validam formato/dimensões/alpha/orientação/tempo, não compatibilidade universal/qualidade visual. Não há suíte de interação browser; cálculos/cache frontend não provam foco ou rendering cross-browser.
 
 **Reavaliar quando.** Fidelidade de cor, variantes amplas, deploy estático ou controles de encoding mudarem. Definir fixtures representativas e medidas de qualidade/recursos primeiro.
 
-**Evidências:** [ADR](../adr/001-native-image-codecs.md), [encoder](../../../backend/internal/infrastructure/imaging/convert/processor.go), [testes](../testing/strategy.md).
+**Evidências:** [ADR](../../pt-br/adr/001-native-image-codecs.md), [encoder](../../../backend/internal/infrastructure/imaging/convert/processor.go), [testes](../../pt-br/testing/strategy.md).
 
 ### Decisão: Prévia nativa antes de fallback exclusivamente visual
 
